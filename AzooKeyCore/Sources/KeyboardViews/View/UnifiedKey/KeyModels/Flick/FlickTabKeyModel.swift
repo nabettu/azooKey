@@ -42,7 +42,7 @@ struct FlickTabKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Un
     func flickSensitivity(to direction: FlickDirection) -> CGFloat { 25 / Extension.SettingProvider.flickSensitivity }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states _: VariableStates, color _: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
-        KeyLabel(labelType, width: width)
+        KeyLabel(labelType, width: width, textSize: .medium)
     }
 
     @MainActor
