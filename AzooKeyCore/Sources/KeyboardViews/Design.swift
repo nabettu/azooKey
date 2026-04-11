@@ -363,7 +363,7 @@ public enum Design {
             case let .return(type):
                 switch type {
                 case .default:
-                    return "↩"
+                    return "return"
                 case .go:
                     return "開く"
                 case .google:
