@@ -74,7 +74,8 @@ struct UnifiedGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtensio
     }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states _: VariableStates, color _: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
-        KeyLabel(labelType, width: width)
+        let size: Design.Fonts.LabelFontSizeStrategy = (colorRole == .special) ? .medium : .large
+        return KeyLabel(labelType, width: width, textSize: size)
     }
 
     @MainActor
