@@ -359,11 +359,11 @@ public enum Design {
         func getEnterKeyText(_ state: EnterKeyState) -> String {
             switch state {
             case .complete:
-                return "確定"
+                return "確定"  // 変換確定時はテキスト表示
             case let .return(type):
                 switch type {
                 case .default:
-                    return "改行"
+                    return "↩"
                 case .go:
                     return "開く"
                 case .google:
