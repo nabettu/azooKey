@@ -45,6 +45,10 @@ struct UnifiedEnterKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>
 
     func label<ThemeExtension>(width: CGFloat, theme: ThemeData<ThemeExtension>, states: VariableStates, color: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         let text = Design.language.getEnterKeyText(states.enterKeyState)
+        // returnの場合はアイコン表示
+        if text == "return" {
+            return KeyLabel(.image("return.left"), width: width, textSize: textSize, textColor: color ?? specialTextColor(states: states, theme: theme))
+        }
         return KeyLabel(.text(text), width: width, textSize: textSize, textColor: color ?? specialTextColor(states: states, theme: theme))
     }
 
