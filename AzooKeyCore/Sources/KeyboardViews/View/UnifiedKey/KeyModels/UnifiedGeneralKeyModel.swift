@@ -80,16 +80,18 @@ struct UnifiedGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtensio
     }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states: VariableStates, color _: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
+        let size: Design.Fonts.LabelFontSizeStrategy = (colorRole == .special) ? .medium : .large
         if usesUppercaseLabel(states: states) {
             return KeyLabel(
                 labelType.uppercasedForEnglishIfInputMatches(
                     pressActions: centerPress,
                     flickMap: flickMap
                 ),
-                width: width
+                width: width,
+                textSize: size
             )
         }
-        return KeyLabel(labelType, width: width)
+        return KeyLabel(labelType, width: width, textSize: size)
     }
 
     private func usesUppercaseLabel(states: VariableStates) -> Bool {
