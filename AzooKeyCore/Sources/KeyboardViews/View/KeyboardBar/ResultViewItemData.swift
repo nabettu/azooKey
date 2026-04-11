@@ -41,14 +41,14 @@ public struct ResultModel {
     private(set) var updateResult: Bool = false
     private(set) var selection: Int?
 
-    enum DisplayState: Hashable, Sendable {
+    public enum DisplayState: Hashable, Sendable {
         case nothing
         case results
         case predictions
     }
 
     /// `results`が空でない場合は`results`の表示を常に優先する
-    var displayState: DisplayState {
+    public var displayState: DisplayState {
         if !results.isEmpty {
             .results
         } else if !predictionResults.isEmpty {
@@ -58,7 +58,7 @@ public struct ResultModel {
         }
     }
 
-    var resultData: [ResultData] {
+    public var resultData: [ResultData] {
         switch displayState {
         case .results:
             results
@@ -137,7 +137,7 @@ public struct ResultModel {
     }
 }
 
-struct ResultData: Identifiable {
-    var id: Int
-    var candidate: any ResultViewItemData
+public struct ResultData: Identifiable {
+    public var id: Int
+    public var candidate: any ResultViewItemData
 }
