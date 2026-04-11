@@ -93,7 +93,8 @@ struct SimpleKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Simp
     let longPressActions: LongpressActionType
 
     func label(width: CGFloat, states: VariableStates) -> KeyLabel<Extension> {
-        KeyLabel(self.keyLabelType, width: width)
+        let size: Design.Fonts.LabelFontSizeStrategy = (unpressedKeyColorType == .special) ? .medium : .large
+        return KeyLabel(self.keyLabelType, width: width, textSize: size)
     }
 
     func pressActions(variableStates: VariableStates) -> [ActionType] {
