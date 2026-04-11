@@ -141,15 +141,15 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
                         ExpandedResultView<Extension>(isResultViewExpanded: $isResultViewExpanded)
                     } else {
                         if Extension.SettingProvider.hideResultBar {
-                            // バーの高さは維持するが中身は非表示（独自バーをoverlayで配置するため）
+                            // バーの高さは縮小して中身は非表示（独自バーをoverlayで配置するため）
                             Color.clear
                                 .frame(
                                     height: Design.keyboardBarHeight(
                                         interfaceHeight: variableStates.interfaceSize.height,
                                         context: variableStates.layoutContext
-                                    )
+                                    ) * 0.6
                                 )
-                                .padding(.vertical, 6)
+                                .padding(.vertical, 2)
                         } else {
                             KeyboardBarView<Extension>(isResultViewExpanded: $isResultViewExpanded)
                                 .frame(
