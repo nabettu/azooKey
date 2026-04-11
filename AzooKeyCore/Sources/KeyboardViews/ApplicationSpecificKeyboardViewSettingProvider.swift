@@ -41,6 +41,12 @@ import Foundation
 
     static var canResetLearningForCandidate: Bool { get }
 
+    /// 内蔵の候補バーを非表示にする（独自候補バーを使用する場合）
+    static var hideResultBar: Bool { get }
+
+    /// 地球儀不要時のchangeKeyboardキーを絵文字タブに変更する
+    static var useEmojiKeyInsteadOfCursorBar: Bool { get }
+
     static func get(_: CustomizableFlickKey) -> KeyFlickSetting.SettingData
 }
 
@@ -60,4 +66,9 @@ extension ApplicationSpecificKeyboardViewSettingProvider {
             .off
         }
     }
+}
+
+public extension ApplicationSpecificKeyboardViewSettingProvider {
+    static var hideResultBar: Bool { false }
+    static var useEmojiKeyInsteadOfCursorBar: Bool { false }
 }

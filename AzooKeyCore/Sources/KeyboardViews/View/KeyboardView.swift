@@ -140,16 +140,28 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
                     } else if isResultViewExpanded {
                         ExpandedResultView<Extension>(isResultViewExpanded: $isResultViewExpanded)
                     } else {
-                        KeyboardBarView<Extension>(isResultViewExpanded: $isResultViewExpanded)
-                            .frame(
-                                height: Design.keyboardBarHeight(
-                                    interfaceHeight: variableStates.interfaceSize.height,
-                                    context: variableStates.layoutContext
+                        if Extension.SettingProvider.hideResultBar {
+                            // バーの高さは維持するが中身は非表示（独自バーをoverlayで配置するため）
+                            Color.clear
+                                .frame(
+                                    height: Design.keyboardBarHeight(
+                                        interfaceHeight: variableStates.interfaceSize.height,
+                                        context: variableStates.layoutContext
+                                    )
                                 )
-                            )
-                            // バーのタッチ判定領域はpaddingより前まで
-                            .contentShape(Rectangle())
-                            .padding(.vertical, 6)
+                                .padding(.vertical, 6)
+                        } else {
+                            KeyboardBarView<Extension>(isResultViewExpanded: $isResultViewExpanded)
+                                .frame(
+                                    height: Design.keyboardBarHeight(
+                                        interfaceHeight: variableStates.interfaceSize.height,
+                                        context: variableStates.layoutContext
+                                    )
+                                )
+                                // バーのタッチ判定領域はpaddingより前まで
+                                .contentShape(Rectangle())
+                                .padding(.vertical, 6)
+                        }
                         keyboardView(tab: defaultTab ?? variableStates.tabManager.existentialTab())
                             .zIndex(1)
                     }

@@ -15,6 +15,9 @@ struct UnifiedChangeKeyboardKeyModel<Extension: ApplicationSpecificKeyboardViewE
         case true:
             return []
         case false:
+            if Extension.SettingProvider.useEmojiKeyInsteadOfCursorBar {
+                return [.moveTab(.system(.emoji_tab))]
+            }
             return [.setCursorBar(.toggle)]
         }
     }
@@ -36,6 +39,9 @@ struct UnifiedChangeKeyboardKeyModel<Extension: ApplicationSpecificKeyboardViewE
         case true:
             return KeyLabel(.changeKeyboard, width: width)
         case false:
+            if Extension.SettingProvider.useEmojiKeyInsteadOfCursorBar {
+                return KeyLabel(.image("face.smiling"), width: width)
+            }
             return KeyLabel(.image("arrowtriangle.left.and.line.vertical.and.arrowtriangle.right"), width: width)
         }
     }
