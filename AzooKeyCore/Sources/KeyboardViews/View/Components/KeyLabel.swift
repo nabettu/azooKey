@@ -90,10 +90,25 @@ public struct KeyLabel<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
         Extension.SettingProvider.keyViewFontSize
     }
 
+    /// 英語フリック時の入力キー用フォントサイズ（flick_abcタブかつ.largeの場合のみ縮小）
+    private var inputKeyViewFontSize: CGFloat {
+        let base = Extension.SettingProvider.keyViewFontSize
+        if base != -1, textSize == .large, variableStates.tabManager.existentialTab() == .flick_abc {
+            return base * 0.75
+        }
+        return base
+    }
+
+    /// テキストが英語入力キーのラベルかどうか（ASCII英字・記号のみで構成）
+    private func isEnglishInputLabel(_ text: String) -> Bool {
+        !text.isEmpty && text.allSatisfy { $0.isASCII }
+    }
+
     public var body: some View {
         switch self.labelType {
         case let .text(text):
-            let font = Design.fonts.keyLabelFont(text: text, width: width, fontSize: self.textSize, userDecidedSize: keyViewFontSize, theme: theme)
+            let fontSize = isEnglishInputLabel(text) ? inputKeyViewFontSize : keyViewFontSize
+            let font = Design.fonts.keyLabelFont(text: text, width: width, fontSize: self.textSize, userDecidedSize: fontSize, theme: theme)
             Text(text)
                 .font(font)
                 .foregroundStyle(mainKeyColor)
@@ -114,7 +129,7 @@ public struct KeyLabel<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
             .allowsHitTesting(false)
 
         case let .mainAndDirections(mainText, directions):
-            let font = Design.fonts.keyLabelFont(text: mainText, width: width, fontSize: self.textSize, userDecidedSize: keyViewFontSize, theme: theme)
+            let font = Design.fonts.keyLabelFont(text: mainText, width: width, fontSize: self.textSize, userDecidedSize: inputKeyViewFontSize, theme: theme)
             let directionLabels = [
                 directions.top,
                 directions.left,
@@ -124,7 +139,7 @@ public struct KeyLabel<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
             .compactMap { $0 }
             .filter { !$0.isEmpty }
             let subFontText = directionLabels.max(by: { $0.count < $1.count }) ?? ""
-            let subFont = Design.fonts.keyLabelFont(text: subFontText, width: width, fontSize: .xxsmall, userDecidedSize: keyViewFontSize, theme: theme)
+            let subFont = Design.fonts.keyLabelFont(text: subFontText, width: width, fontSize: .xxsmall, userDecidedSize: inputKeyViewFontSize, theme: theme)
             DirectionalKeyLabel(main: mainText, directions: directions, font: font, subFont: subFont)
                 .foregroundStyle(mainKeyColor)
                 .allowsHitTesting(false)

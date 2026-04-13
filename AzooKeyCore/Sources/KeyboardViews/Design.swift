@@ -136,7 +136,7 @@ public enum Design {
         }
     }
     public static var keyboardScreenBottomPadding: CGFloat {
-        2
+        0
     }
 
     /// This property calculate suitable width for normal keyView.
@@ -144,8 +144,10 @@ public enum Design {
         keyboardHeight(screenWidth: SemiStaticStates.shared.screenWidth, orientation: orientation, upsideComponent: upsideComponent) + keyboardScreenBottomPadding
     }
 
+    /// resultViewのpadding高さ（hideResultBar時は0にして余白を削減）
+    @MainActor public static var resultViewPaddingHeight: CGFloat = 12
+
     /// screenWidthに依存して決定する
-    /// 12はresultViewのpadding
     @MainActor public static func keyboardHeight(screenWidth: CGFloat, orientation: KeyboardOrientation, upsideComponent: UpsideComponent? = nil) -> CGFloat {
         let scale: CGFloat
         if let upsideComponent {
@@ -162,13 +164,13 @@ public enum Design {
         let width = min(screenWidth, SemiStaticStates.shared.screenWidth)
         switch layoutMode(orientation: orientation) {
         case .phoneVertical:
-            return 51 / 74 * width * scale + 12
+            return 51 / 74 * width * scale + resultViewPaddingHeight
         case .padVertical:
-            return 15 / 31 * width * scale + 12
+            return 15 / 31 * width * scale + resultViewPaddingHeight
         case .phoneHorizontal:
-            return 17 / 56 * width * scale + 12
+            return 17 / 56 * width * scale + resultViewPaddingHeight
         case .padHorizontal:
-            return 5 / 18 * width * scale + 12
+            return 5 / 18 * width * scale + resultViewPaddingHeight
         }
     }
 

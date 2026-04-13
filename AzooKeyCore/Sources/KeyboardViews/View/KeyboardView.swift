@@ -90,7 +90,7 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
         ZStack { [unowned variableStates] in
             ZStack(alignment: .bottom) {
                 if #available(iOS 26, *), variableStates.keyboardOrientation == .vertical {
-                    let shape = UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28)
+                    let shape = UnevenRoundedRectangle(topLeadingRadius: 16, topTrailingRadius: 16)
                     extendedBackground.clipShape(shape)
                     backgroundCore.clipShape(shape)
                 } else {
@@ -119,12 +119,18 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
                     } else if isResultViewExpanded {
                         ExpandedResultView<Extension>(isResultViewExpanded: $isResultViewExpanded)
                     } else {
-                        if Extension.SettingProvider.hideResultBar {
+                        let isEmojiTab: Bool = {
+                            if case .special(.emoji) = variableStates.tabManager.existentialTab() {
+                                return true
+                            }
+                            return false
+                        }()
+                        if Extension.SettingProvider.hideResultBar && !isEmojiTab {
                             // バーの高さは縮小して中身は非表示（独自バーをoverlayで配置するため）
                             Color.clear
                                 .frame(height: Design.keyboardBarHeight(interfaceHeight: variableStates.interfaceSize.height, orientation: variableStates.keyboardOrientation) * 0.6)
                                 .padding(.vertical, 2)
-                        } else {
+                        } else if !Extension.SettingProvider.hideResultBar {
                             KeyboardBarView<Extension>(isResultViewExpanded: $isResultViewExpanded)
                                 .frame(height: Design.keyboardBarHeight(interfaceHeight: variableStates.interfaceSize.height, orientation: variableStates.keyboardOrientation))
                                 .contentShape(Rectangle())

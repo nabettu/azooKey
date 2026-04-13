@@ -15,7 +15,7 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
     @EnvironmentObject private var variableStates: VariableStates
     @Environment(Extension.Theme.self) private var theme
 
-    private struct EmojiData: Identifiable {
+    fileprivate struct EmojiData: Identifiable {
         init(emoji: String, base: String) {
             self.emoji = emoji
             self.base = base
@@ -27,7 +27,7 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
         var id: UUID
     }
 
-    private enum Genre: UInt8, CaseIterable, Identifiable {
+    fileprivate enum Genre: UInt8, CaseIterable, Identifiable {
         /// 最近使った絵文字
         case recent
 
@@ -64,17 +64,17 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
             case .smileys:
                 return "face.smiling"
             case .natures:
-                return "fish"
+                return "pawprint"
             case .eats:
-                return "fork.knife"
+                return "cup.and.saucer"
             case .activities:
                 return "soccerball"
             case .trips:
-                return "building.columns"
+                return "car"
             case .items:
                 return "lightbulb"
             case .symbols:
-                return "exclamationmark.questionmark"
+                return "heart"
             case .flags:
                 return "flag"
             case .recent:
@@ -157,31 +157,18 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
         TabDependentDesign(width: 1, height: 1, interfaceSize: variableStates.interfaceSize, orientation: variableStates.keyboardOrientation).keysHeight
     }
 
-    private var scrollViewHeight: CGFloat {
-        keysHeight * 0.85
+    private var footerHeight: CGFloat {
+        keysHeight * 0.12
     }
 
-    private var footerHeight: CGFloat {
-        keysHeight * 0.15
+    private var scrollViewHeight: CGFloat {
+        keysHeight - footerHeight
     }
 
     private var verticalCount: Int {
-        switch self.expandLevel {
-        case .small:
-            switch variableStates.keyboardOrientation {
-            case .vertical: return 6
-            case .horizontal: return 4
-            }
-        case .medium:
-            switch variableStates.keyboardOrientation {
-            case .vertical: return 5
-            case .horizontal: return 3
-            }
-        case .large:
-            switch variableStates.keyboardOrientation {
-            case .vertical: return 3
-            case .horizontal: return 2
-            }
+        switch variableStates.keyboardOrientation {
+        case .vertical: return 5
+        case .horizontal: return 3
         }
     }
 
@@ -193,8 +180,6 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
 
     @State private var selectedGenre: Genre = .smileys
 
-    @State private var expandLevel: EmojiTabExpandModePreference.Level = .large
-
     init() {}
     // 正方形のキーにする
     private var keySize: CGFloat {
@@ -205,17 +190,59 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
         .init(emoji: replacements[emoji, default: emoji], base: emoji)
     }
 
+    /// EmojiDictionaryを含むバンドルディレクトリを探す
+    private static func findEmojiDictionaryURL() -> URL? {
+        let mainBundleURL = Bundle.main.bundleURL
+        // サブバンドル内の EmojiDictionary を探索
+        if let contents = try? FileManager.default.contentsOfDirectory(at: mainBundleURL, includingPropertiesForKeys: nil) {
+            for url in contents where url.pathExtension == "bundle" {
+                let emojiDir = url.appendingPathComponent("EmojiDictionary", isDirectory: true)
+                if FileManager.default.fileExists(atPath: emojiDir.path) {
+                    return emojiDir
+                }
+            }
+        }
+        // フォールバック: Bundle.main 直下
+        return mainBundleURL
+    }
+
     private static func getEmojis(keyboardInternalSettingManager: KeyboardInternalSettingManager) -> [Genre: [EmojiData]] {
         let fileURL: URL
         // 読み込むファイルはバージョンごとに変更する必要がある
-        if #available(iOS 26.4, *) {
-            fileURL = Bundle.main.bundleURL.appendingPathComponent("emoji_genre_E17.0.txt", isDirectory: false)
-        } else if #available(iOS 18.4, *) {
-            fileURL = Bundle.main.bundleURL.appendingPathComponent("emoji_genre_E16.0.txt", isDirectory: false)
-        } else {
-            // in this case, always satisfies #available(iOS 17.4, *)
-            fileURL = Bundle.main.bundleURL.appendingPathComponent("emoji_genre_E15.1.txt", isDirectory: false)
+        guard let emojiDir = findEmojiDictionaryURL() else {
+            debug("EmojiDictionary not found in any bundle")
+            return [:]
         }
+        let fileName: String
+        if #available(iOS 26.4, *) {
+            fileName = "emoji_genre_E17.0.txt"
+        } else if #available(iOS 18.4, *) {
+            fileName = "emoji_genre_E16.0.txt"
+        } else {
+            fileName = "emoji_genre_E15.1.txt"
+        }
+        fileURL = emojiDir.appendingPathComponent(fileName, isDirectory: false)
+        // ファイルが存在しない場合、利用可能な最新バージョンにフォールバック
+        if !FileManager.default.fileExists(atPath: fileURL.path) {
+            let fallbackNames = ["emoji_genre_E16.0.txt", "emoji_genre_E15.1.txt", "emoji_genre_E15.0.txt", "emoji_genre_E14.0.txt", "emoji_genre_E13.1.txt"]
+            var foundURL: URL?
+            for name in fallbackNames {
+                let candidate = emojiDir.appendingPathComponent(name, isDirectory: false)
+                if FileManager.default.fileExists(atPath: candidate.path) {
+                    foundURL = candidate
+                    break
+                }
+            }
+            guard let fallback = foundURL else {
+                debug("No emoji_genre file found in \(emojiDir.path)")
+                return [:]
+            }
+            return loadEmojis(from: fallback, keyboardInternalSettingManager: keyboardInternalSettingManager)
+        }
+        return loadEmojis(from: fileURL, keyboardInternalSettingManager: keyboardInternalSettingManager)
+    }
+
+    private static func loadEmojis(from fileURL: URL, keyboardInternalSettingManager: KeyboardInternalSettingManager) -> [Genre: [EmojiData]] {
         let genres: [String: Genre] = [
             "Symbols": .symbols,
             "Flags": .flags,
@@ -247,11 +274,11 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                 emojis[genre, default: []].append(contentsOf: splited[1].split(separator: ",").map(String.init))
             }
         } catch {
-            debug(error)
+            debug("Failed to load emoji file: \(fileURL.path), error: \(error)")
             return [:]
         }
         let preference = keyboardInternalSettingManager.tabCharacterPreference
-        let recentlyUsed = preference.getRecentlyUsed(for: .system(.emoji), count: 49)
+        let recentlyUsed = preference.getRecentlyUsed(for: .system(.emoji), count: 20)
         emojis[.recent] = recentlyUsed
 
         let replacements = preference.getPreferences(for: .system(.emoji))
@@ -270,89 +297,63 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
         SimpleKeyView(model: SimpleKeyModel<Extension>(keyLabelType: .image("delete.left"), unpressedKeyColorType: .special, pressActions: [.delete(1)], longPressActions: .init(repeat: [.delete(1)])), width: functionKeyWidth, height: footerHeight)
     }
 
-    private func expandKey() -> SimpleKeyView<Extension> {
-        SimpleKeyView(model: ExpandKeyModel<Extension>(currentLevel: expandLevel, action: {
-            let newValue = expandLevel.next()
-            self.expandLevel = newValue
-            variableStates.keyboardInternalSettingManager.update(\.emojiTabExpandModePreference) { value in
-                value.level = newValue
-            }
-        }), width: functionKeyWidth, height: footerHeight)
-    }
 
     private func backTabKey() -> SimpleKeyView<Extension> {
         SimpleKeyView(model: SimpleKeyModel<Extension>(keyLabelType: .text("戻る"), unpressedKeyColorType: .special, pressActions: [.moveTab(.system(.last_tab))], longPressActions: .none), width: functionKeyWidth * 2, height: footerHeight)
     }
 
-    private func genreKey(_ genre: Genre) -> some View {
-        SimpleKeyView<Extension>(model: GenreKeyModel<Extension>(systemImage: genre.icon, unpressedKeyColorType: genre == selectedGenre ? .selected : .unimportant, action: { self.selectedGenre = genre }), width: functionKeyWidth, height: footerHeight)
-    }
+    @State private var scrollProxy: ScrollViewProxy?
 
-    private func switchGenreButton(genre: Genre, systemImage: String) -> some View {
+    private func genreButton(_ genre: Genre) -> some View {
         Button {
             self.selectedGenre = genre
+            if let proxy = scrollProxy {
+                proxy.scrollTo("genre_\(genre.rawValue)", anchor: .leading)
+            }
         } label: {
-            Label(genre.title, systemImage: systemImage)
-                .labelStyle(.iconOnly)
-                .font(.largeTitle)
-                .foregroundStyle(theme.resultTextColor.color)
-                .frame(width: footerHeight, height: scrollViewHeight)
-                .contentShape(Rectangle())
+            Image(systemName: genre.icon)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(genre == selectedGenre ? Color(uiColor: .label) : Color(uiColor: .secondaryLabel))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(
+                    genre == selectedGenre
+                        ? Circle().fill(Color(uiColor: .systemGray3))
+                        : Circle().fill(Color.clear)
+                )
         }
+        .buttonStyle(.plain)
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                ScrollViewReader { reader in
-                    let gridItem = GridItem(.fixed(keySize), spacing: 0)
-                    HStack {
-                        if let prev = selectedGenre.prev {
-                            switchGenreButton(genre: prev, systemImage: "chevron.left")
-                        }
-                        LazyHGrid(rows: Array(repeating: gridItem, count: verticalCount), spacing: 0) {
-                            let models = self.emojis[selectedGenre, default: []]
-                            if !models.isEmpty {
-                                SimpleKeyView<Extension>(model: SimpleKeyModel<Extension>(keyLabelType: .image(selectedGenre.icon), unpressedKeyColorType: .selected, pressActions: []), width: keySize, height: keySize)
-                                    .id(0)
-                                ForEach(models) { model in
-                                    SimpleKeyView<Extension>(model: EmojiKeyModel<Extension>(model.emoji, base: model.base), width: keySize, height: keySize)
-                                }
-                            }
-                        }
-                        .onChange(of: selectedGenre) { (_, _) in
-                            reader.scrollTo(0)
-                        }
-                        .padding(.vertical, 0)
-                        .padding(.horizontal, 5)
-                        if let next = selectedGenre.next {
-                            switchGenreButton(genre: next, systemImage: "chevron.right")
-                        }
-                    }
-                }
-            }
+            // 絵文字スクロール領域（子Viewに切り出して不要な再描画を防止）
+            EmojiScrollContent<Extension>(
+                emojis: emojis,
+                allGenre: allGenre,
+                keySize: keySize,
+                verticalCount: verticalCount,
+                onProxyReady: { self.scrollProxy = $0 }
+            )
             .frame(height: scrollViewHeight)
 
+            Spacer().frame(height: 8)
+
+            // フッター（ネイティブ風カテゴリバー）
             HStack(spacing: 0) {
                 backTabKey()
                 ForEach(allGenre, id: \.self) { genre in
                     if !self.emojis[genre, default: []].isEmpty {
-                        genreKey(genre)
+                        genreButton(genre)
                     }
                 }
                 deleteKey()
-                expandKey()
             }
-            .labelStyle(.iconOnly)
             .frame(height: footerHeight)
+            .padding(.horizontal, 4)
         }
         .frame(width: variableStates.interfaceSize.width)
-        .onChange(of: self.selectedGenre) { (_, _) in
-            self.updateEmojiData()
-        }
         .onAppear {
             self.updateEmojiData()
-            self.expandLevel = variableStates.keyboardInternalSettingManager.emojiTabExpandModePreference.level
             if !self.emojis[.recent, default: []].isEmpty {
                 self.selectedGenre = .recent
             }
@@ -364,8 +365,7 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
         }
     }
 
-    /// Recently Usedなどは更新される
-    /// - note: 更新頻度が高すぎると使い辛いので、あまり頻繁に呼ばない方がよい。表示を切り替えた場面などに限るとよい
+    /// 絵文字データを読み込む（タブ表示時のみ呼ぶ。入力中の更新はレンダリングずれを起こすため避ける）
     private func updateEmojiData() {
         self.emojis = Self.getEmojis(keyboardInternalSettingManager: variableStates.keyboardInternalSettingManager)
     }
@@ -445,8 +445,12 @@ private struct EmojiKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
     }
 
     func additionalOnPress(variableStates: VariableStates) {
-        variableStates.keyboardInternalSettingManager.update(\.tabCharacterPreference) { value in
-            value.setUsed(base: self.base, for: .system(.emoji))
+        // @Publishedのupdate経由だとVariableStatesのobjectWillChangeが発火しスクロールがリセットされる
+        // UserDefaultsに直接書き込んで再描画を回避する
+        var pref = variableStates.keyboardInternalSettingManager.tabCharacterPreference
+        pref.setUsed(base: self.base, for: .system(.emoji))
+        if let data = try? JSONEncoder().encode(pref) {
+            variableStates.keyboardInternalSettingManager.userDefaults.set(data, forKey: "tab_character_preference")
         }
     }
     func pressActions(variableStates: VariableStates) -> [ActionType] {
@@ -457,6 +461,40 @@ private struct EmojiKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
     }
     func feedback(variableStates: VariableStates) {
         KeyboardFeedback<Extension>.click()
+    }
+}
+
+/// 絵文字スクロール内容を分離したView
+/// variableStatesの@Published変更による再描画を防ぎ、スクロール位置を安定させる
+private struct EmojiScrollContent<Extension: ApplicationSpecificKeyboardViewExtension>: View {
+    let emojis: [EmojiTab<Extension>.Genre: [EmojiTab<Extension>.EmojiData]]
+    let allGenre: [EmojiTab<Extension>.Genre]
+    let keySize: CGFloat
+    let verticalCount: Int
+    let onProxyReady: (ScrollViewProxy) -> Void
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            ScrollViewReader { reader in
+                let gridItem = GridItem(.fixed(keySize), spacing: 2)
+                HStack(spacing: 6) {
+                    ForEach(allGenre, id: \.self) { genre in
+                        let models = emojis[genre, default: []]
+                        if !models.isEmpty {
+                            LazyHGrid(rows: Array(repeating: gridItem, count: verticalCount), spacing: 2) {
+                                ForEach(models) { model in
+                                    SimpleKeyView<Extension>(model: EmojiKeyModel<Extension>(model.emoji, base: model.base), width: keySize, height: keySize)
+                                }
+                            }
+                            .padding(.horizontal, 2)
+                            .id("genre_\(genre.rawValue)")
+                        }
+                    }
+                }
+                .padding(.horizontal, 5)
+                .onAppear { onProxyReady(reader) }
+            }
+        }
     }
 }
 
