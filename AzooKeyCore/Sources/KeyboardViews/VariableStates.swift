@@ -400,7 +400,7 @@ public final class VariableStates: ObservableObject {
     }
 
     @MainActor
-    func resetOneHandedModeSetting() {
+    public func resetOneHandedModeSetting() {
         // 設定管理オブジェクトを通じて、oneHandedModeSettingを更新する
         keyboardInternalSettingManager.update(\.oneHandedModeSetting) { setting in
             // ステップ1: まず、カスタム設定をまっさらな状態にリセットする
