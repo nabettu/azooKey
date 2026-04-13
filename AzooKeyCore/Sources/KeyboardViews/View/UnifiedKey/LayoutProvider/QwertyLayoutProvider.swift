@@ -30,8 +30,14 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         symbolsKey: any UnifiedKeyModelProtocol<Extension>,
         changeKeyboardKey: any UnifiedKeyModelProtocol<Extension>
     ) {
-        // language key
-        let languageKey: any UnifiedKeyModelProtocol<Extension> = QwertyLanguageSwitchKeyModel<Extension>(languages: (.ja_JP, .en_US))
+        // language key（英語専用モード時はシフトキーに置換）
+        let languageKey: any UnifiedKeyModelProtocol<Extension>
+        if Extension.SettingProvider.englishKeyboardLayout == .qwerty && Extension.SettingProvider.japaneseKeyboardLayout == .flick {
+            // 英語専用モード: 言語切替不要、シフトキーを配置
+            languageKey = QwertyShiftKeyModel<Extension>()
+        } else {
+            languageKey = QwertyLanguageSwitchKeyModel<Extension>(languages: (.ja_JP, .en_US))
+        }
         // numbers key
         let numbersKey: any UnifiedKeyModelProtocol<Extension> = QwertyGeneralKeyModel(
             labelType: .image("textformat.123"),
@@ -141,8 +147,13 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
 
         // 4th row: bottom controls (language and dynamic change)
         let tabs = tabKeys()
-        dict[.init(x: 0, y: 3, width: 1.4)] = tabs.languageKey
-        dict[.init(x: 1.4, y: 3, width: 1.4)] = tabs.changeKeyboardKey
+        let isEnglishOnlyMode = Extension.SettingProvider.englishKeyboardLayout == .qwerty && Extension.SettingProvider.japaneseKeyboardLayout == .flick
+        if isEnglishOnlyMode {
+            dict[.init(x: 0, y: 3, width: 2.8)] = tabs.changeKeyboardKey
+        } else {
+            dict[.init(x: 0, y: 3, width: 1.4)] = tabs.languageKey
+            dict[.init(x: 1.4, y: 3, width: 1.4)] = tabs.changeKeyboardKey
+        }
         dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey()
         dict[.init(x: 7.2, y: 3, width: 2.8)] = UnifiedEnterKeyModel<Extension>(textSize: .small)
 
@@ -268,13 +279,19 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
             variations: [], direction: .right, showsTapBubble: false, role: .special
         )
         // Row 3: numbers or shift at left, and dynamic change key next
-        switch shiftBehaviorPreference() {
-        case .leftbottom:
-            dict[.init(x: 0, y: 3, width: 1.4)] = QwertyShiftKeyModel<Extension>()
-        default:
-            dict[.init(x: 0, y: 3, width: 1.4)] = tabsAbc.numbersKey
+        let isEnglishOnlyMode = Extension.SettingProvider.englishKeyboardLayout == .qwerty && Extension.SettingProvider.japaneseKeyboardLayout == .flick
+        if isEnglishOnlyMode {
+            // 英語専用モード: シフトキーなし、数字記号キーのみ（🌐はシステムバーにある）
+            dict[.init(x: 0, y: 3, width: 2.8)] = tabsAbc.numbersKey
+        } else {
+            switch shiftBehaviorPreference() {
+            case .leftbottom:
+                dict[.init(x: 0, y: 3, width: 1.4)] = QwertyShiftKeyModel<Extension>()
+            default:
+                dict[.init(x: 0, y: 3, width: 1.4)] = tabsAbc.numbersKey
+            }
+            dict[.init(x: 1.4, y: 3, width: 1.4)] = tabsAbc.changeKeyboardKey
         }
-        dict[.init(x: 1.4, y: 3, width: 1.4)] = tabsAbc.changeKeyboardKey
         dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey()
         dict[.init(x: 7.2, y: 3, width: 2.8)] = UnifiedEnterKeyModel<Extension>(textSize: .small)
         return dict
@@ -316,8 +333,13 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         }
         dict[.init(x: 8.6, y: 2, width: 1.4)] = QwertyGeneralKeyModel(labelType: .image("delete.left"), pressActions: { _ in [.delete(1)] }, longPressActions: { _ in .init(repeat: [.delete(1)]) }, variations: [], direction: .right, showsTapBubble: false, role: .special)
         // Row 3
-        dict[.init(x: 0, y: 3, width: 1.4)] = tabs.languageKey
-        dict[.init(x: 1.4, y: 3, width: 1.4)] = tabs.changeKeyboardKey
+        let isEnglishOnlyMode2 = Extension.SettingProvider.englishKeyboardLayout == .qwerty && Extension.SettingProvider.japaneseKeyboardLayout == .flick
+        if isEnglishOnlyMode2 {
+            dict[.init(x: 0, y: 3, width: 2.8)] = tabs.changeKeyboardKey
+        } else {
+            dict[.init(x: 0, y: 3, width: 1.4)] = tabs.languageKey
+            dict[.init(x: 1.4, y: 3, width: 1.4)] = tabs.changeKeyboardKey
+        }
         dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey()
         dict[.init(x: 7.2, y: 3, width: 2.8)] = UnifiedEnterKeyModel<Extension>()
         return dict
