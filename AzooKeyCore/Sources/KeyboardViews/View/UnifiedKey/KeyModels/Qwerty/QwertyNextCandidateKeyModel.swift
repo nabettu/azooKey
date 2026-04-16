@@ -12,11 +12,19 @@ struct QwertyNextCandidateKeyModel<Extension: ApplicationSpecificKeyboardViewExt
     }
     func longPressActions(variableStates: VariableStates) -> LongpressActionType {
         if variableStates.resultModel.results.isEmpty {
-            .init(start: [.setCursorBar(.toggle)])
+            // 空の長押しアクション（カーソルトラッキングはView側で処理）
+            .init(duration: .normal, start: [], repeat: [])
         } else {
             .init(start: [.input(" ")])
         }
     }
+
+    var supportsCursorTracking: Bool { true }
+
+    func hasLongPressAction(variableStates _: VariableStates) -> Bool {
+        true
+    }
+
     func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace {
         .none
     }

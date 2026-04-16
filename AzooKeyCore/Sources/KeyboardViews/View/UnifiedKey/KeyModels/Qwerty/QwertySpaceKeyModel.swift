@@ -7,8 +7,16 @@ struct QwertySpaceKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>:
         [.input(" ")]
     }
     func longPressActions(variableStates _: VariableStates) -> LongpressActionType {
-        .init(start: [.setCursorBar(.toggle)])
+        // 空の長押しアクション（カーソルトラッキングはView側で処理）
+        .init(duration: .normal, start: [], repeat: [])
     }
+
+    var supportsCursorTracking: Bool { true }
+
+    func hasLongPressAction(variableStates _: VariableStates) -> Bool {
+        true
+    }
+
     func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace {
         .none
     }
