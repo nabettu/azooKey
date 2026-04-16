@@ -283,7 +283,7 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
             return [:]
         }
         let preference = keyboardInternalSettingManager.tabCharacterPreference
-        let recentlyUsed = preference.getRecentlyUsed(for: .system(.emoji), count: 20)
+        let recentlyUsed = preference.getRecentlyUsed(for: .system(.emoji), count: 32)
         emojis[.recent] = recentlyUsed
 
         let replacements = preference.getPreferences(for: .system(.emoji))
@@ -341,7 +341,7 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
             )
             .frame(height: scrollViewHeight)
 
-            Spacer().frame(height: 8)
+            Spacer().frame(height: 18)
 
             // フッター（ネイティブ風カテゴリバー）
             HStack(spacing: 0) {
@@ -481,17 +481,17 @@ private struct EmojiScrollContent<Extension: ApplicationSpecificKeyboardViewExte
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             ScrollViewReader { reader in
-                let gridItem = GridItem(.fixed(keySize), spacing: 2)
-                HStack(spacing: 6) {
+                let gridItem = GridItem(.fixed(keySize), spacing: 5)
+                HStack(spacing: 8) {
                     ForEach(allGenre, id: \.self) { genre in
                         let models = emojis[genre, default: []]
                         if !models.isEmpty {
-                            LazyHGrid(rows: Array(repeating: gridItem, count: verticalCount), spacing: 2) {
+                            LazyHGrid(rows: Array(repeating: gridItem, count: verticalCount), spacing: 5) {
                                 ForEach(models) { model in
                                     SimpleKeyView<Extension>(model: EmojiKeyModel<Extension>(model.emoji, base: model.base), width: keySize, height: keySize)
                                 }
                             }
-                            .padding(.horizontal, 2)
+                            .padding(.horizontal, 3)
                             .id("genre_\(genre.rawValue)")
                         }
                     }

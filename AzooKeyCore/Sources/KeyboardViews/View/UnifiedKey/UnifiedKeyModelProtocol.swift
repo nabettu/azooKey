@@ -40,6 +40,9 @@ public protocol UnifiedKeyModelProtocol<Extension> {
     @MainActor func hasFlickVariations(variableStates: VariableStates) -> Bool
     @MainActor func hasLinearVariations(variableStates: VariableStates) -> Bool
     @MainActor func hasLongPressAction(variableStates: VariableStates) -> Bool
+
+    // 長押し時にカーソル移動トラッキングモードに入るかどうか
+    @MainActor var supportsCursorTracking: Bool { get }
 }
 
 public extension UnifiedKeyModelProtocol {
@@ -50,6 +53,8 @@ public extension UnifiedKeyModelProtocol {
     @MainActor func backgroundStyleWhenPressed<ThemeExtension>(theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         (theme.pushedKeyFillColor.color, theme.pushedKeyFillColor.blendMode)
     }
+
+    @MainActor var supportsCursorTracking: Bool { false }
 
     // Default capabilities derived from variationSpace and longPressActions
     @MainActor func hasFlickVariations(variableStates: VariableStates) -> Bool {

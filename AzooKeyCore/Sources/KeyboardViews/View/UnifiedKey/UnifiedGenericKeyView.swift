@@ -150,6 +150,11 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
     // Unified lifecycle state
     @State private var lifecycle = PressLifecycle()
 
+    // カーソルトラッキング状態
+    @State private var isCursorTracking = false
+    @State private var cursorTrackCount: Double = 0
+    @State private var cursorTrackLastX: CGFloat = 0
+
     private var longpressDuration: TimeInterval {
         switch self.model.longPressActions(variableStates: variableStates).duration {
         case .light: 0.125
@@ -517,7 +522,27 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
                 case .started:
                     break
                 case .longPressed:
-                    break
+                    // カーソルトラッキング: 長押し後の左右ドラッグでカーソル移動
+                    if model.supportsCursorTracking {
+                        if !isCursorTracking {
+                            isCursorTracking = true
+                            cursorTrackLastX = value.location.x
+                            cursorTrackCount = 0
+                        } else {
+                            let dx = value.location.x - cursorTrackLastX
+                            cursorTrackCount += dx
+                            cursorTrackLastX = value.location.x
+                            let threshold: Double = 12
+                            while cursorTrackCount >= threshold {
+                                action.registerAction(.moveCursor(1), variableStates: variableStates)
+                                cursorTrackCount -= threshold
+                            }
+                            while cursorTrackCount <= -threshold {
+                                action.registerAction(.moveCursor(-1), variableStates: variableStates)
+                                cursorTrackCount += threshold
+                            }
+                        }
+                    }
                 case .linearVariations:
                     let dx = value.location.x - value.startLocation.x
                     let (arr, direction) = linearVariations()
@@ -577,6 +602,9 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
                 case .longFlicked:
                     break
                 }
+                // カーソルトラッキングをリセット
+                isCursorTracking = false
+                cursorTrackCount = 0
                 // ダブルタップ判定のため、直近のUp情報は維持
                 self.lifecycle.reset(preserveDoublePress: true)
             }
@@ -630,6 +658,25 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
             onCancelled: cancelPress
         ))
         .overlay { self.model.label(width: size.width, theme: theme, states: variableStates, color: nil) }
+        .overlay {
+            // カーソルトラッキング中: ← → をキー上に表示
+            if isCursorTracking {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(theme.specialKeyFillColor.color)
+                    .frame(width: size.width, height: size.height)
+                    .overlay {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrowtriangle.left.fill")
+                                .font(.system(size: 10, weight: .bold))
+                            Image(systemName: "line.vertical")
+                                .font(.system(size: 12, weight: .light))
+                            Image(systemName: "arrowtriangle.right.fill")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .foregroundStyle(theme.resultTextColor.color)
+                    }
+            }
+        }
         .overlay(alignment: .center) {
             if let flickSuggestType, !self.flickMap().isEmpty {
                 UnifiedFlickSuggestView<Extension>(model: model, tabDesign: tabDesign, size: size, suggestType: flickSuggestType)

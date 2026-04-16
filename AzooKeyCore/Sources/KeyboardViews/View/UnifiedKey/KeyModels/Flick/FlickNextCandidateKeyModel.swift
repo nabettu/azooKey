@@ -13,27 +13,45 @@ struct FlickNextCandidateKeyModel<Extension: ApplicationSpecificKeyboardViewExte
     }
     func longPressActions(variableStates: VariableStates) -> LongpressActionType {
         if variableStates.resultModel.results.isEmpty {
-            .init(start: [.setCursorBar(.toggle)])
+            // 空の長押しアクション（カーソルトラッキングはView側で処理）
+            .init(duration: .normal, start: [], repeat: [])
         } else {
             .init(repeat: [.selectCandidate(.offset(1))])
         }
     }
-    func variationSpace(variableStates: VariableStates) -> UnifiedVariationSpace {
-        let left: UnifiedVariation = if variableStates.resultModel.selection != nil {
-            UnifiedVariation(label: .text("前候補"), pressActions: [.selectCandidate(.offset(-1))], longPressActions: .init(repeat: [.selectCandidate(.offset(-1))]))
-        } else {
-            UnifiedVariation(label: .text("←"), pressActions: [.moveCursor(-1)], longPressActions: .init(repeat: [.moveCursor(-1)]))
-        }
-        return .fourWay([
-            .left: left,
-            .top: UnifiedVariation(label: .text("全角"), pressActions: [.input("　")]),
-            .bottom: UnifiedVariation(label: .text("Tab"), pressActions: [.input("\u{0009}")]),
-        ])
+
+    // 空白モード時はカーソルトラッキングを有効にする
+    var supportsCursorTracking: Bool { true }
+
+    func hasLongPressAction(variableStates: VariableStates) -> Bool {
+        // 空白モード時もtrueを返してdecideLongPressOutcomeが.actionになるようにする
+        true
     }
-    func isFlickAble(to direction: FlickDirection, variableStates _: VariableStates) -> Bool {
+
+    func variationSpace(variableStates: VariableStates) -> UnifiedVariationSpace {
+        // 変換候補がある場合のみフリックバリエーションを表示
+        if !variableStates.resultModel.results.isEmpty {
+            let left: UnifiedVariation = if variableStates.resultModel.selection != nil {
+                UnifiedVariation(label: .text("前候補"), pressActions: [.selectCandidate(.offset(-1))], longPressActions: .init(repeat: [.selectCandidate(.offset(-1))]))
+            } else {
+                UnifiedVariation(label: .text("←"), pressActions: [.moveCursor(-1)], longPressActions: .init(repeat: [.moveCursor(-1)]))
+            }
+            return .fourWay([
+                .left: left,
+                .top: UnifiedVariation(label: .text("全角"), pressActions: [.input("　")]),
+                .bottom: UnifiedVariation(label: .text("Tab"), pressActions: [.input("\u{0009}")]),
+            ])
+        }
+        // 空白モード時はフリックバリエーションなし（カーソルトラッキングを使う）
+        return .none
+    }
+    func isFlickAble(to direction: FlickDirection, variableStates: VariableStates) -> Bool {
+        if variableStates.resultModel.results.isEmpty {
+            return false
+        }
         switch direction {
-        case .left, .top, .bottom: true
-        case .right: false
+        case .left, .top, .bottom: return true
+        case .right: return false
         }
     }
 
