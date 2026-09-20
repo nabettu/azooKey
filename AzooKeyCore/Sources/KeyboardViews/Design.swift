@@ -135,9 +135,14 @@ public enum Design {
             return .padHorizontal
         }
     }
-    public static var keyboardScreenBottomPadding: CGFloat {
-        0
-    }
+    /// キーボードの下に空ける余白。
+    ///
+    /// iOS は `needsInputModeSwitchKey == false` のとき（システムが地球儀と
+    /// マイクを自前で描くとき）、キーボードビューの下に領域を確保して
+    /// `safeAreaInsets.bottom` で知らせてくる。ここを 0 のままにすると
+    /// キーの最下段がその領域に潜り、地球儀・マイクと重なる。
+    /// ホスト側から `view.safeAreaInsets.bottom` を入れること。
+    @MainActor public static var keyboardScreenBottomPadding: CGFloat = 0
 
     /// This property calculate suitable width for normal keyView.
     @MainActor public static func keyboardScreenHeight(upsideComponent: UpsideComponent?, orientation: KeyboardOrientation) -> CGFloat {
