@@ -164,7 +164,8 @@ public enum Design {
     /// `safeAreaInsets.bottom` で知らせてくる。ここを 0 のままにすると
     /// キーの最下段がその領域に潜り、地球儀・マイクと重なる。
     /// ホスト側から `view.safeAreaInsets.bottom` を入れること。
-    @MainActor public static var keyboardScreenBottomPadding: CGFloat = 0
+    /// keyboardScreenHeight(context:) がメインアクター外でも呼ばれるので nonisolated(unsafe)
+    nonisolated(unsafe) public static var keyboardScreenBottomPadding: CGFloat = 0
 
     /// This property calculate suitable width for normal keyView.
     public static func keyboardScreenHeight(
