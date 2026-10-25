@@ -187,8 +187,12 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
 
     init() {}
     // 正方形のキーにする
+    /// 行のあいだの間隔（`EmojiScrollContent` の `GridItem` と `LazyHGrid` の spacing）
+    fileprivate static var rowSpacing: CGFloat { 5 }
+
     private var keySize: CGFloat {
-        scrollViewHeight / CGFloat(verticalCount)
+        // 行の間隔を引いてから割る。引かないと行数 × 間隔ぶんグリッドが表示領域からはみ出し、外側の行が欠ける
+        (scrollViewHeight - Self.rowSpacing * CGFloat(verticalCount - 1)) / CGFloat(verticalCount)
     }
 
     private static func getEmojiDataItem(for emoji: String, replacements: [String: String]) -> EmojiData {
@@ -282,7 +286,8 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
             debug("Failed to load emoji file: \(fileURL.path), error: \(error)")
             return [:]
         }
-        let preference = keyboardInternalSettingManager.tabCharacterPreference
+        // 使った絵文字は EmojiKeyModel が UserDefaults に直接書く（再描画を避けるため）ので、メモリ上の値ではなく保存値を読む
+        let preference = KeyboardInternalSettingManager(userDefaults: keyboardInternalSettingManager.userDefaults).tabCharacterPreference
         let recentlyUsed = preference.getRecentlyUsed(for: .system(.emoji), count: 32)
         emojis[.recent] = recentlyUsed
 
@@ -452,7 +457,8 @@ private struct EmojiKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
     func additionalOnPress(variableStates: VariableStates) {
         // @Publishedのupdate経由だとVariableStatesのobjectWillChangeが発火しスクロールがリセットされる
         // UserDefaultsに直接書き込んで再描画を回避する
-        var pref = variableStates.keyboardInternalSettingManager.tabCharacterPreference
+        // メモリ上の値は更新しない（上の理由）ので、毎回保存値から読み直す。読み直さないとタップのたびに前回の記録を上書きする
+        var pref = KeyboardInternalSettingManager(userDefaults: variableStates.keyboardInternalSettingManager.userDefaults).tabCharacterPreference
         pref.setUsed(base: self.base, for: .system(.emoji))
         if let data = try? JSONEncoder().encode(pref) {
             variableStates.keyboardInternalSettingManager.userDefaults.set(data, forKey: "tab_character_preference")
@@ -481,7 +487,7 @@ private struct EmojiScrollContent<Extension: ApplicationSpecificKeyboardViewExte
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             ScrollViewReader { reader in
-                let gridItem = GridItem(.fixed(keySize), spacing: 5)
+                let gridItem = GridItem(.fixed(keySize), spacing: EmojiTab<Extension>.rowSpacing)
                 HStack(spacing: 8) {
                     ForEach(allGenre, id: \.self) { genre in
                         let models = emojis[genre, default: []]

@@ -625,6 +625,9 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
         self.flickSuggestType = nil
         self.qwertySuggestType = nil
         self.isSuggesting = false
+        // カーソルトラッキングも中断する（残すと次の長押しが前回の位置との差分でカーソルを動かす）
+        isCursorTracking = false
+        cursorTrackCount = 0
     }
 
     // MARK: background/label
