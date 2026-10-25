@@ -17,6 +17,25 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
 
     private let lineWidth: CGFloat = 6
     private let edgeRatio: CGFloat = 1 / 5
+    /// ハンドルのタップ領域の最小の厚み。線（太さ 3pt）だけを当たり判定にすると、指で掴みにくい
+    private let minimumHitThickness: CGFloat = 44
+    /// 線の外側に足すタップ領域の余白
+    private let hitPadding: CGFloat = 12
+
+    /// 左右のハンドルのタップ領域（線を描いている帯 + 余白。厚みは最低 `minimumHitThickness`）
+    private func sideHandleHitArea(isLeft: Bool) -> Path {
+        let thickness = max(size.width / 8 + hitPadding, minimumHitThickness)
+        let halfLength = size.height * edgeRatio * 0.8 + hitPadding
+        let x = isLeft ? 0 : size.width - thickness
+        return Path(CGRect(x: x, y: size.height / 2 - halfLength, width: thickness, height: halfLength * 2))
+    }
+
+    /// 上のハンドルのタップ領域
+    private var topHandleHitArea: Path {
+        let thickness = max(size.height / 8 + hitPadding, minimumHitThickness)
+        let halfLength = size.width * edgeRatio * 0.8 + hitPadding
+        return Path(CGRect(x: size.width / 2 - halfLength, y: 0, width: halfLength * 2, height: thickness))
+    }
     private let edgeColor: Color = .blue
 
     @State private var initialPosition: CGPoint
@@ -135,6 +154,7 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                 }
             }
             .stroke(Color.white, lineWidth: 3)
+            .contentShape(sideHandleHitArea(isLeft: true))
             .gesture(xGesture(target: \.$top_left_edge))
             Path {path in
                 for i in 0..<4 {
@@ -145,6 +165,7 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                 }
             }
             .stroke(Color.white, lineWidth: 3)
+            .contentShape(topHandleHitArea)
             .gesture(yGesture(target: \.$top_left_edge, isTopHandle: true))
             Path {path in
                 for i in 0..<4 {
@@ -155,6 +176,7 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                 }
             }
             .stroke(Color.white, lineWidth: 3)
+            .contentShape(sideHandleHitArea(isLeft: false))
             .gesture(xGesture(target: \.$bottom_right_edge))
             HStack {
                 let cur = min(size.width, size.height) * 0.22
