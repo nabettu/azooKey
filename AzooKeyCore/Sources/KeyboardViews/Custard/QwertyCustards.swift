@@ -34,6 +34,29 @@ public extension Custard {
     static func qwertyNumbers(customKeys: QwertyCustomKeysValue) -> Custard {
         DefaultQwertyCustards.numbers(customKeys: customKeys)
     }
+
+    // MARK: - 英語専用モード（TypeAI。日本語タブを持たないので言語切替キーを出さない）
+
+    /// 英語専用モードの英字タブ。言語切替キー（Z の左）をシフトに、左下を数字タブにする（iOS 標準の英語キーボードと同じ並び）
+    static var qwertyEnglishOnlyLetters: Custard {
+        var custard = qwertyEnglish(useShiftKey: true, useDeprecatedShiftKeyBehavior: false)
+        custard.interface.keys[DefaultQwertyCustards.position(0, 2, width: 1.4)] = .system(.qwertyShift)
+        custard.interface.keys[DefaultQwertyCustards.position(0, 3, width: 1.4)] = DefaultQwertyCustards.tabKey(
+            label: .systemImage("textformat.123"),
+            destination: .qwerty_numbers
+        )
+        return custard
+    }
+
+    /// 英語専用モードの数字・記号タブ。左下の言語切替キーを英字タブに戻るキーにする
+    static func qwertyEnglishOnly(numbersOrSymbols custard: Custard) -> Custard {
+        var custard = custard
+        custard.interface.keys[DefaultQwertyCustards.position(0, 3, width: 1.4)] = DefaultQwertyCustards.tabKey(
+            label: .text("ABC"),
+            destination: .qwerty_english
+        )
+        return custard
+    }
 }
 
 private enum DefaultQwertyCustards {
@@ -381,7 +404,7 @@ private enum DefaultQwertyCustards {
         )
     }
 
-    private static func tabKey(
+    static func tabKey(
         label: CustardKeyLabelStyle,
         destination: TabData.SystemTab
     ) -> CustardInterfaceKey {
@@ -433,7 +456,7 @@ private enum DefaultQwertyCustards {
         (7.1, 1.4),
     ]
 
-    private static func position(
+    static func position(
         _ x: Double,
         _ y: Int,
         width: Double = 1

@@ -211,8 +211,16 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
         .frame(height: totalBackgroundHeight)
     }
 
+    /// 英語専用モード（TypeAI）。日本語の配列がフリックで英語が QWERTY のとき、QWERTY に日本語タブへ行く導線が無いので言語切替キーを出さない
+    private var isEnglishOnlyMode: Bool {
+        Extension.SettingProvider.englishKeyboardLayout == .qwerty && Extension.SettingProvider.japaneseKeyboardLayout == .flick
+    }
+
     private var standardEnglishQwertyCustard: Custard {
-        switch Extension.SettingProvider.qwertyShiftBehaviorPreference {
+        if isEnglishOnlyMode {
+            return .qwertyEnglishOnlyLetters
+        }
+        return switch Extension.SettingProvider.qwertyShiftBehaviorPreference {
         case .left:
             .qwertyEnglish(
                 useShiftKey: true,
@@ -247,13 +255,16 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
                 custard: standardEnglishQwertyCustard
             )
         case .qwerty_numbers:
+            let numbers = Custard.qwertyNumbers(
+                customKeys: Extension.SettingProvider.numberTabCustomKeysSetting
+            )
             CustomKeyboardView<Extension>(
-                custard: .qwertyNumbers(
-                    customKeys: Extension.SettingProvider.numberTabCustomKeysSetting
-                )
+                custard: isEnglishOnlyMode ? .qwertyEnglishOnly(numbersOrSymbols: numbers) : numbers
             )
         case .qwerty_symbols:
-            CustomKeyboardView<Extension>(custard: .qwertySymbols)
+            CustomKeyboardView<Extension>(
+                custard: isEnglishOnlyMode ? .qwertyEnglishOnly(numbersOrSymbols: .qwertySymbols) : .qwertySymbols
+            )
         case let .custard(custard):
             CustomKeyboardView<Extension>(custard: custard)
         case let .special(tab):
