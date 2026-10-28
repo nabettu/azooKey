@@ -64,12 +64,15 @@ final class ResetOneHandedModeBottomPaddingTests: XCTestCase {
         )
     }
 
-    func test_fullWidthAfterResetUsesDefaultKeyboardHeight() throws {
+    /// リセットは画面への反映をメインキューに積む（updateResizingState）。それを待ってから見る
+    func test_interfaceHeightAfterResetIsDefaultKeyboardHeight() throws {
         Design.keyboardScreenBottomPadding = 18
         let states = try makeStates()
 
         states.resetOneHandedModeSetting()
-        states.setResizingMode(.fullwidth)
+        let drained = expectation(description: "main queue drained")
+        DispatchQueue.main.async { drained.fulfill() }
+        wait(for: [drained], timeout: 2)
 
         XCTAssertEqual(
             states.interfaceSize.height,
@@ -100,11 +103,35 @@ final class ExpandedMaximumHeightTests: XCTestCase {
         )
     }
 
+    func test_stopsAtCap() {
+        let cap = Design.keyboardHeight(context: context) * 2
+        XCTAssertEqual(
+            OneHandedVerticalResizeResult.expandedMaximumHeight(current: cap - 10, context: context),
+            cap,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            OneHandedVerticalResizeResult.expandedMaximumHeight(current: cap, context: context),
+            cap,
+            accuracy: 0.001
+        )
+    }
+
+    /// 上限より高い保存値（以前の上限は余白 2 つ分高かった）は縮めない
+    func test_doesNotShrinkWhenAlreadyAboveCap() {
+        let cap = Design.keyboardHeight(context: context) * 2
+        XCTAssertEqual(
+            OneHandedVerticalResizeResult.expandedMaximumHeight(current: cap + 20, context: context),
+            cap + 20,
+            accuracy: 0.001
+        )
+    }
+
     /// 上限は本体の高さの 2 倍で、キーボード下の余白には左右されない
     func test_capIgnoresBottomPadding() {
         Design.keyboardScreenBottomPadding = 18
         XCTAssertEqual(
-            OneHandedVerticalResizeResult.expandedMaximumHeight(current: 10_000, context: context),
+            OneHandedVerticalResizeResult.expandedMaximumHeight(current: 500, context: context),
             Design.keyboardHeight(context: context) * 2,
             accuracy: 0.001
         )

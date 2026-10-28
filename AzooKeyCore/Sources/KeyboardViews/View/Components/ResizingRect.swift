@@ -45,9 +45,10 @@ struct OneHandedVerticalResizeResult: Equatable {
     /// 「上に広げる」ボタンで maximumHeight を 64pt ずつ広げる。上限は既定の高さの 2 倍。
     ///
     /// maximumHeight は本体の高さ（interfaceSize.height + bottomOffset）なので、
-    /// キーボード下の余白（`Design.keyboardScreenBottomPadding`）は上限に足さない
+    /// キーボード下の余白（`Design.keyboardScreenBottomPadding`）は上限に足さない。
+    /// すでに上限より高いとき（以前は上限に余白を足していたので、その差まで広げた高さが保存されている）は縮めない
     static func expandedMaximumHeight(current: CGFloat, context: KeyboardLayoutContext) -> CGFloat {
-        min(current + 64, Design.keyboardHeight(context: context) * 2)
+        max(current, min(current + 64, Design.keyboardHeight(context: context) * 2))
     }
 
     private static func validated(
