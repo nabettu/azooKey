@@ -407,7 +407,9 @@ public final class VariableStates: ObservableObject {
             setting.reset(orientation: self.keyboardOrientation)
 
             // ステップ2: 次に、リセットされた項目に「本来のデフォルト値」を再設定する
-            let defaultHeight = Design.keyboardHeight(context: layoutContext) + Design.keyboardScreenBottomPadding
+            // 保存するのは本体の高さ（interfaceSize）。キーボード下の余白（keyboardScreenBottomPadding）は
+            // KeyboardView が本体の外に足すので、ここに含めると余白が二重に乗る
+            let defaultHeight = Design.keyboardHeight(context: layoutContext)
             let defaultSize = CGSize(width: containerWidth, height: defaultHeight)
             setting.setIfFirst(orientation: self.keyboardOrientation, size: defaultSize, position: .zero, forced: true) // forced: trueで確実に上書きする
         }

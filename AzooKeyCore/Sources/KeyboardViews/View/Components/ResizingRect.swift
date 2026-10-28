@@ -42,6 +42,14 @@ struct OneHandedVerticalResizeResult: Equatable {
         )
     }
 
+    /// 「上に広げる」ボタンで maximumHeight を 64pt ずつ広げる。上限は既定の高さの 2 倍。
+    ///
+    /// maximumHeight は本体の高さ（interfaceSize.height + bottomOffset）なので、
+    /// キーボード下の余白（`Design.keyboardScreenBottomPadding`）は上限に足さない
+    static func expandedMaximumHeight(current: CGFloat, context: KeyboardLayoutContext) -> CGFloat {
+        min(current + 64, Design.keyboardHeight(context: context) * 2)
+    }
+
     private static func validated(
         height: CGFloat,
         bottomOffset: CGFloat,
@@ -318,19 +326,13 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                         }
                 }
                 Button {
-                    let orientation = variableStates.keyboardOrientation
-                    let baseline = Design
-                        .keyboardHeight(
-                            context: KeyboardLayoutContext(
-                                containerWidth: variableStates.containerWidth,
-                                orientation: orientation,
-                                idiom: variableStates.layoutIdiom
-                            )
-                        ) * 2
-                        + Design.keyboardScreenBottomPadding * 2
-
-                    variableStates.maximumHeight = min(
-                        variableStates.maximumHeight + 64, baseline
+                    variableStates.maximumHeight = OneHandedVerticalResizeResult.expandedMaximumHeight(
+                        current: variableStates.maximumHeight,
+                        context: KeyboardLayoutContext(
+                            containerWidth: variableStates.containerWidth,
+                            orientation: variableStates.keyboardOrientation,
+                            idiom: variableStates.layoutIdiom
+                        )
                     )
                 } label: {
                     Circle()
