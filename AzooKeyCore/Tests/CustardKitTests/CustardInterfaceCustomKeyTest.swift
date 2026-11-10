@@ -113,7 +113,8 @@ final class CustardInterfaceCustomKeyTest: XCTestCase {
             XCTAssertEqual(target.design, .init(label: .systemImage("delete.left"), color: .special))
             XCTAssertEqual(target.press_actions, [.delete(1)])
             XCTAssertEqual(target.longpress_actions, .init(repeat: [.delete(1)]))
-            XCTAssertEqual(target.variations.count, 1)
+            // TypeAI: 左フリックの「文頭まで削除」は誤爆で文が消えるので外した（2026-11-11）
+            XCTAssertEqual(target.variations, [])
         }
     }
 

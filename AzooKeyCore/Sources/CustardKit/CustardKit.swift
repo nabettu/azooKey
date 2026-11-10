@@ -737,16 +737,8 @@ public extension CustardInterfaceCustomKey {
             design: .init(label: .systemImage("delete.left"), color: .special),
             press_actions: [.delete(1)],
             longpress_actions: .init(repeat: [.delete(1)]),
-            variations: [
-                .init(
-                    type: .flickVariation(.left),
-                    key: .init(
-                        design: .init(label: .systemImage("xmark")),
-                        press_actions: [.smartDeleteDefault],
-                        longpress_actions: .none
-                    )
-                ),
-            ]
+            // TypeAI: 左フリックの「文頭まで削除」は誤爆で文がまとめて消えるので外した（2026-11-11）
+            variations: []
         )
     }
 
