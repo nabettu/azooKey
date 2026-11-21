@@ -3,6 +3,34 @@ import Foundation
 import KeyboardThemes
 import SwiftUI
 
+/// キー (0,3) に出すもの
+enum ChangeKeyboardKeyContent: Equatable {
+    case globe
+    /// 地球儀を自前で描く端末（iPhone Duo・ホームボタンの iPhone・iPad）で、絵文字キーを消さずに半分ずつ並べる
+    case globeAndEmoji
+    case emoji
+    case cursorBar
+
+    static func resolve(needsInputModeSwitchKey: Bool, useEmojiKeyInsteadOfCursorBar: Bool) -> Self {
+        switch (needsInputModeSwitchKey, useEmojiKeyInsteadOfCursorBar) {
+        case (true, true): .globeAndEmoji
+        case (true, false): .globe
+        case (false, true): .emoji
+        case (false, false): .cursorBar
+        }
+    }
+
+    /// キーに出すラベル
+    var labelType: KeyLabelType {
+        switch self {
+        case .globe: .changeKeyboard
+        case .globeAndEmoji: .changeKeyboardAndEmoji
+        case .emoji: .image("face.smiling")
+        case .cursorBar: .image("arrowtriangle.left.and.line.vertical.and.arrowtriangle.right")
+        }
+    }
+}
+
 struct UnifiedChangeKeyboardKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: UnifiedKeyModelProtocol {
     @MainActor private var _enablePasteButton: Bool {
         Extension.SettingProvider.enablePasteButton
@@ -10,14 +38,20 @@ struct UnifiedChangeKeyboardKeyModel<Extension: ApplicationSpecificKeyboardViewE
     @MainActor private var usePasteButton: Bool {
         !SemiStaticStates.shared.needsInputModeSwitchKey && SemiStaticStates.shared.hasFullAccess && _enablePasteButton
     }
+    @MainActor private var content: ChangeKeyboardKeyContent {
+        .resolve(
+            needsInputModeSwitchKey: SemiStaticStates.shared.needsInputModeSwitchKey,
+            useEmojiKeyInsteadOfCursorBar: Extension.SettingProvider.useEmojiKeyInsteadOfCursorBar
+        )
+    }
     func pressActions(variableStates: VariableStates) -> [ActionType] {
-        switch SemiStaticStates.shared.needsInputModeSwitchKey {
-        case true:
+        switch content {
+        case .globe, .globeAndEmoji:
+            // 地球儀・絵文字はラベルの UIKit ボタンが自分でタッチを受ける
             return []
-        case false:
-            if Extension.SettingProvider.useEmojiKeyInsteadOfCursorBar {
-                return [.moveTab(.system(.emoji_tab))]
-            }
+        case .emoji:
+            return [.moveTab(.system(.emoji_tab))]
+        case .cursorBar:
             return [.setCursorBar(.toggle)]
         }
     }
@@ -35,15 +69,7 @@ struct UnifiedChangeKeyboardKeyModel<Extension: ApplicationSpecificKeyboardViewE
     }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states _: VariableStates, color _: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
-        switch SemiStaticStates.shared.needsInputModeSwitchKey {
-        case true:
-            return KeyLabel(.changeKeyboard, width: width)
-        case false:
-            if Extension.SettingProvider.useEmojiKeyInsteadOfCursorBar {
-                return KeyLabel(.image("face.smiling"), width: width)
-            }
-            return KeyLabel(.image("arrowtriangle.left.and.line.vertical.and.arrowtriangle.right"), width: width)
-        }
+        KeyLabel(content.labelType, width: width)
     }
     func backgroundStyleWhenUnpressed<ThemeExtension>(states _: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         (theme.specialKeyFillColor.color, theme.specialKeyFillColor.blendMode)

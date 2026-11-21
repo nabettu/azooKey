@@ -59,3 +59,55 @@ public struct ChangeKeyboardButtonView<Extension: ApplicationSpecificKeyboardVie
         uiView.tintColor = UIColor(theme.textColor.color)
     }
 }
+
+/// 地球儀と並べる絵文字ボタン。地球儀（UIKit のボタン）と同じくタッチを自分で受けるために UIKit で作る
+struct EmojiTabButtonView<Extension: ApplicationSpecificKeyboardViewExtension>: UIViewRepresentable {
+    let size: CGFloat
+    let onTap: () -> Void
+    @Environment(Extension.Theme.self) private var theme
+
+    final class Coordinator: NSObject {
+        var onTap: () -> Void
+        init(onTap: @escaping () -> Void) {
+            self.onTap = onTap
+        }
+        @objc func tapped() {
+            onTap()
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onTap: onTap)
+    }
+
+    /// 地球儀（`ChangeKeyboardButtonView.weight`）と同じ太さにする
+    private var weight: UIImage.SymbolWeight {
+        switch theme.textFont {
+        case .ultraLight: .ultraLight
+        case .thin: .thin
+        case .light, .regular: .light
+        case .medium: .medium
+        case .semibold, .bold: .semibold
+        case .heavy: .heavy
+        case .black: .black
+        }
+    }
+
+    private var image: UIImage? {
+        let config = UIImage.SymbolConfiguration(pointSize: size, weight: weight, scale: .default)
+        return UIImage(systemName: "face.smiling", withConfiguration: config)
+    }
+
+    func makeUIView(context: Context) -> UIButton {
+        let button = UIButton(type: .custom)
+        button.addTarget(context.coordinator, action: #selector(Coordinator.tapped), for: .touchUpInside)
+        updateUIView(button, context: context)
+        return button
+    }
+
+    func updateUIView(_ uiView: UIButton, context: Context) {
+        context.coordinator.onTap = onTap
+        uiView.setImage(image, for: .normal)
+        uiView.tintColor = UIColor(theme.textColor.color)
+    }
+}

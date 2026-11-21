@@ -24,7 +24,7 @@ extension KeyLabelType {
                     bottom: directions.bottom?.uppercasedIfInputMatches(flickMap[.bottom]?.pressActions ?? [])
                 )
             )
-        case .image, .customImage, .changeKeyboard, .selectable:
+        case .image, .customImage, .changeKeyboard, .changeKeyboardAndEmoji, .selectable:
             return self
         }
     }
