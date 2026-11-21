@@ -180,6 +180,14 @@ public enum Design {
     /// 詰めた画面（iPhone Duo の内側で 39pt）では AI ボタンや候補が窮屈になる。0 なら下限なし
     nonisolated(unsafe) public static var minimumKeyboardBarHeight: CGFloat = 0
 
+    /// TypeAI: 全幅に戻すとき（タブ切替・回転）の中身の高さ。nil なら azooKey の値（保存値・幅由来）。
+    /// ホストが高さを固定する画面（iPhone Duo）で、幅由来の高さを一瞬描いてから書き戻されるちらつきを防ぐ
+    nonisolated(unsafe) public static var fixedFullWidthInterfaceHeight: CGFloat? = nil
+
+    /// TypeAI: 絵文字タブの行数。nil なら azooKey の既定（縦 5 行・横 3 行）。
+    /// iPhone Duo の内側は横向き扱いだが縦に十分な高さがあり、3 行では絵文字が大きすぎた
+    nonisolated(unsafe) public static var emojiTabVerticalCount: Int? = nil
+
     /// TypeAI: custard の格子のうち、絵文字の一覧を埋め込む列（custard の identifier ごと）。
     /// フリック配列を片側に寄せ、空けた側に絵文字タブの中身を出す（iPhone Duo の内側・iPad）
     public struct EmbeddedEmojiPanel: Sendable, Equatable {

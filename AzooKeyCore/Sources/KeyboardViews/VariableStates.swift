@@ -230,7 +230,7 @@ public final class VariableStates: ObservableObject {
             let height = keyboardInternalSettingManager.oneHandedModeSetting.heightItem(orientation: keyboardOrientation).height
             interfaceSize = .init(
                 width: containerWidth,
-                height: (height ?? baseHeight) * self.heightScaleFromKeyboardHeightSetting
+                height: Design.fixedFullWidthInterfaceHeight ?? (height ?? baseHeight) * self.heightScaleFromKeyboardHeightSetting
             )
             interfacePosition = .zero
             interfaceBottomOffset = 0
@@ -381,7 +381,7 @@ public final class VariableStates: ObservableObject {
         let effectiveHeight = (ignoreStoredHeight ? height : (idealHeight ?? height)) * heightScaleFromKeyboardHeightSetting
         switch self.resizingState {
         case .fullwidth:
-            self.interfaceSize = CGSize(width: width, height: effectiveHeight)
+            self.interfaceSize = CGSize(width: width, height: Design.fixedFullWidthInterfaceHeight ?? effectiveHeight)
             self.interfaceBottomOffset = 0
         case .onehanded, .resizing:
             let item = keyboardInternalSettingManager.oneHandedModeSetting.item(orientation: orientation)
