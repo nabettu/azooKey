@@ -154,6 +154,8 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
     @State private var isCursorTracking = false
     @State private var cursorTrackCount: Double = 0
     @State private var cursorTrackLastX: CGFloat = 0
+    /// 分割キー（地球儀と絵文字）で、押している側の半分。押した側の背景だけを押した色にする
+    @State private var pressedSplitHalf: SplitKeyHalf?
 
     private var longpressDuration: TimeInterval {
         switch self.model.longPressActions(variableStates: variableStates).duration {
@@ -630,18 +632,37 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
         cursorTrackCount = 0
     }
 
+    /// 分割キーのとき、押し始めの位置からどちらの半分を押したかを覚える
+    private func recordingSplitHalf(_ handlers: KeyPressHandlers) -> KeyPressHandlers {
+        guard model.splitsBackgroundInHalves else {
+            return handlers
+        }
+        return KeyPressHandlers(
+            onChanged: { value in
+                if let offset = value.startOffsetFromCenterX {
+                    pressedSplitHalf = SplitKeyHalf.at(offsetFromCenterX: offset)
+                }
+                handlers.onChanged(value)
+            },
+            onEnded: {
+                handlers.onEnded()
+                pressedSplitHalf = nil
+            }
+        )
+    }
+
     // MARK: background/label
-    private var keyBackgroundStyle: UnifiedKeyBackgroundStyleValue {
-        let isActive: Bool = lifecycle.state.isActive
-        return if isActive {
+    private func keyBackgroundStyle(isActive: Bool) -> UnifiedKeyBackgroundStyleValue {
+        if isActive {
             model.backgroundStyleWhenPressed(theme: theme)
         } else {
             model.backgroundStyleWhenUnpressed(states: variableStates, theme: theme)
         }
     }
 
-    private func keyBackground(size: CGSize) -> KeyBackground {
-        KeyBackground(
+    private func keyBackground(size: CGSize, isActive: Bool) -> KeyBackground {
+        let keyBackgroundStyle = keyBackgroundStyle(isActive: isActive)
+        return KeyBackground(
             backgroundColor: keyBackgroundStyle.color,
             borderColor: theme.borderColor.color,
             borderWidth: theme.borderWidth,
@@ -662,13 +683,13 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
             let gap = tabDesign.horizontalSpacing
             let half = CGSize(width: KeyLabelType.splitHalfWidth(totalWidth: size.width, gap: gap), height: size.height)
             HStack(spacing: gap) {
-                keyBackground(size: half)
-                keyBackground(size: half)
+                keyBackground(size: half, isActive: SplitKeyHalf.leading.isHighlighted(isActive: lifecycle.state.isActive, pressedHalf: pressedSplitHalf))
+                keyBackground(size: half, isActive: SplitKeyHalf.trailing.isHighlighted(isActive: lifecycle.state.isActive, pressedHalf: pressedSplitHalf))
             }
             .frame(width: size.width, height: size.height)
             .contentShape(Rectangle())
         } else {
-            keyBackground(size: size)
+            keyBackground(size: size, isActive: lifecycle.state.isActive)
         }
     }
 
@@ -676,9 +697,13 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
         keyBackgroundView
         .modifier(KeyPressGestureModifier(
             hitSize: CGSize(width: size.width + tabDesign.horizontalSpacing, height: size.height + tabDesign.verticalSpacing),
-            flick: flickGesture,
-            linear: qwertyGesture,
-            onCancelled: cancelPress
+            keyWidth: size.width,
+            flick: recordingSplitHalf(flickGesture),
+            linear: recordingSplitHalf(qwertyGesture),
+            onCancelled: {
+                pressedSplitHalf = nil
+                cancelPress()
+            }
         ))
         .overlay {
             self.model.label(width: size.width, theme: theme, states: variableStates, color: nil)

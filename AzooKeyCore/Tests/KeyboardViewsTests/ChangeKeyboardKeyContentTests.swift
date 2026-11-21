@@ -55,4 +55,26 @@ final class ChangeKeyboardKeyContentTests: XCTestCase {
         XCTAssertEqual(KeyLabelType.splitHalfWidth(totalWidth: 69, gap: 5), 32)
         XCTAssertEqual(KeyLabelType.splitHalfWidth(totalWidth: 4, gap: 6), 0)
     }
+
+    /// 分割キーは押した側（地球儀か絵文字）の背景だけを押した色にする
+    func test_splitKeyHalf_decidedByTouchX() {
+        XCTAssertEqual(SplitKeyHalf.at(offsetFromCenterX: -34), .leading)
+        XCTAssertEqual(SplitKeyHalf.at(offsetFromCenterX: -0.5), .leading)
+        XCTAssertEqual(SplitKeyHalf.at(offsetFromCenterX: 0), .trailing)
+        XCTAssertEqual(SplitKeyHalf.at(offsetFromCenterX: 34), .trailing)
+        // 隙間ぶん広い当たり判定の外側でも、近い側にする
+        XCTAssertEqual(SplitKeyHalf.at(offsetFromCenterX: -38), .leading)
+        XCTAssertEqual(SplitKeyHalf.at(offsetFromCenterX: 38), .trailing)
+        // KeyPressValue は位置が取れない経路では nil のまま（両方に色を付ける）
+        XCTAssertNil(KeyPressValue(time: Date(), startLocation: .zero, location: .zero).startOffsetFromCenterX)
+    }
+
+    func test_splitKeyHalf_onlyPressedHalfIsHighlighted() {
+        XCTAssertTrue(SplitKeyHalf.leading.isHighlighted(isActive: true, pressedHalf: .leading))
+        XCTAssertFalse(SplitKeyHalf.trailing.isHighlighted(isActive: true, pressedHalf: .leading))
+        XCTAssertFalse(SplitKeyHalf.leading.isHighlighted(isActive: false, pressedHalf: .leading))
+        // どちら側か分からないときは、分ける前と同じく両方に色を付ける
+        XCTAssertTrue(SplitKeyHalf.leading.isHighlighted(isActive: true, pressedHalf: nil))
+        XCTAssertTrue(SplitKeyHalf.trailing.isHighlighted(isActive: true, pressedHalf: nil))
+    }
 }
