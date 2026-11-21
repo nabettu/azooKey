@@ -154,7 +154,7 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
     @State private var isCursorTracking = false
     @State private var cursorTrackCount: Double = 0
     @State private var cursorTrackLastX: CGFloat = 0
-    /// 分割キー（地球儀と絵文字）で、押している側の半分。押した側の背景だけを押した色にする
+    /// 分割キー（地球儀と絵文字）で、押している側の半分。中のボタンが知らせる。押した側の背景だけを押した色にする
     @State private var pressedSplitHalf: SplitKeyHalf?
 
     private var longpressDuration: TimeInterval {
@@ -632,23 +632,13 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
         cursorTrackCount = 0
     }
 
-    /// 分割キーのとき、押し始めの位置からどちらの半分を押したかを覚える
-    private func recordingSplitHalf(_ handlers: KeyPressHandlers) -> KeyPressHandlers {
+    /// 分割キーの中のボタンが、押している側を知らせる先
+    private var splitKeyPressChange: (@MainActor (SplitKeyHalf?) -> Void)? {
         guard model.splitsBackgroundInHalves else {
-            return handlers
+            return nil
         }
-        return KeyPressHandlers(
-            onChanged: { value in
-                if let offset = value.startOffsetFromCenterX {
-                    pressedSplitHalf = SplitKeyHalf.at(offsetFromCenterX: offset)
-                }
-                handlers.onChanged(value)
-            },
-            onEnded: {
-                handlers.onEnded()
-                pressedSplitHalf = nil
-            }
-        )
+        let pressed = $pressedSplitHalf
+        return { half in pressed.wrappedValue = half }
     }
 
     // MARK: background/label
@@ -683,8 +673,8 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
             let gap = tabDesign.horizontalSpacing
             let half = CGSize(width: KeyLabelType.splitHalfWidth(totalWidth: size.width, gap: gap), height: size.height)
             HStack(spacing: gap) {
-                keyBackground(size: half, isActive: SplitKeyHalf.leading.isHighlighted(isActive: lifecycle.state.isActive, pressedHalf: pressedSplitHalf))
-                keyBackground(size: half, isActive: SplitKeyHalf.trailing.isHighlighted(isActive: lifecycle.state.isActive, pressedHalf: pressedSplitHalf))
+                keyBackground(size: half, isActive: SplitKeyHalf.leading.isHighlighted(pressedHalf: pressedSplitHalf))
+                keyBackground(size: half, isActive: SplitKeyHalf.trailing.isHighlighted(pressedHalf: pressedSplitHalf))
             }
             .frame(width: size.width, height: size.height)
             .contentShape(Rectangle())
@@ -697,17 +687,14 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
         keyBackgroundView
         .modifier(KeyPressGestureModifier(
             hitSize: CGSize(width: size.width + tabDesign.horizontalSpacing, height: size.height + tabDesign.verticalSpacing),
-            keyWidth: size.width,
-            flick: recordingSplitHalf(flickGesture),
-            linear: recordingSplitHalf(qwertyGesture),
-            onCancelled: {
-                pressedSplitHalf = nil
-                cancelPress()
-            }
+            flick: flickGesture,
+            linear: qwertyGesture,
+            onCancelled: cancelPress
         ))
         .overlay {
             self.model.label(width: size.width, theme: theme, states: variableStates, color: nil)
                 .environment(\.splitKeyGap, model.splitsBackgroundInHalves ? tabDesign.horizontalSpacing : 0)
+                .environment(\.splitKeyPressChange, splitKeyPressChange)
         }
         .overlay {
             // カーソルトラッキング中: ← → をキー上に表示

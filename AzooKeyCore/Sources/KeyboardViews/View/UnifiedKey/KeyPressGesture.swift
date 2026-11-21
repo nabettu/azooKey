@@ -4,21 +4,17 @@ struct KeyPressValue {
     var time: Date
     var startLocation: CGPoint
     var location: CGPoint
-    /// 押し始めの位置の、キーの中心からの x のずれ。分割キーでどちらの半分を押したかに使う（取れない経路では nil）
-    var startOffsetFromCenterX: CGFloat?
 
-    init(_ value: DragGesture.Value, centerX: CGFloat? = nil) {
+    init(_ value: DragGesture.Value) {
         time = value.time
         startLocation = value.startLocation
         location = value.location
-        startOffsetFromCenterX = centerX.map { value.startLocation.x - $0 }
     }
 
-    init(time: Date, startLocation: CGPoint, location: CGPoint, startOffsetFromCenterX: CGFloat? = nil) {
+    init(time: Date, startLocation: CGPoint, location: CGPoint) {
         self.time = time
         self.startLocation = startLocation
         self.location = location
-        self.startOffsetFromCenterX = startOffsetFromCenterX
     }
 }
 
@@ -31,8 +27,6 @@ struct KeyPressHandlers {
 @MainActor
 struct KeyPressGestureModifier: ViewModifier {
     var hitSize: CGSize
-    /// キー本体の幅（当たり判定は隙間ぶん広い）。押し始めの位置をキーの中心からのずれにするのに使う
-    var keyWidth: CGFloat
     var flick: KeyPressHandlers
     var linear: KeyPressHandlers
     var onCancelled: () -> Void
@@ -70,7 +64,7 @@ struct KeyPressGestureModifier: ViewModifier {
                 .onEnded { _ in flick.onEnded() }
                 .simultaneously(with:
                     DragGesture(minimumDistance: .zero)
-                        .onChanged { linear.onChanged(KeyPressValue($0, centerX: keyWidth / 2)) }
+                        .onChanged { linear.onChanged(KeyPressValue($0)) }
                         .onEnded { _ in linear.onEnded() }
                 )
         )
@@ -133,7 +127,6 @@ struct ImmediateKeyGesture: UIViewRepresentable {
         var onCancelled: (() -> Void)?
         private var trackedTouch: UITouch?
         private var startLocation: CGPoint = .zero
-        private var startOffsetFromCenterX: CGFloat?
 
         // Observe the key's touch without preventing other recognizers.
         override func canPrevent(_ other: UIGestureRecognizer) -> Bool { false }
@@ -145,9 +138,7 @@ struct ImmediateKeyGesture: UIViewRepresentable {
             }
             trackedTouch = touch
             startLocation = touch.location(in: nil)
-            // 当たり判定の面はキーと中心が同じなので、面の中心からのずれ = キーの中心からのずれ
-            startOffsetFromCenterX = view.map { touch.location(in: $0).x - $0.bounds.midX }
-            onChanged?(KeyPressValue(time: Date(), startLocation: startLocation, location: startLocation, startOffsetFromCenterX: startOffsetFromCenterX))
+            onChanged?(KeyPressValue(time: Date(), startLocation: startLocation, location: startLocation))
             state = .began
         }
 
@@ -155,7 +146,7 @@ struct ImmediateKeyGesture: UIViewRepresentable {
             guard let touch = trackedTouch, touches.contains(touch) else {
                 return
             }
-            onChanged?(KeyPressValue(time: Date(), startLocation: startLocation, location: touch.location(in: nil), startOffsetFromCenterX: startOffsetFromCenterX))
+            onChanged?(KeyPressValue(time: Date(), startLocation: startLocation, location: touch.location(in: nil)))
             state = .changed
         }
 
