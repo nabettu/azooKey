@@ -166,14 +166,13 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
         ).keysHeight
     }
 
+    /// 埋め込みでも絵文字タブと同じ式にする（絵文字の大きさを揃える。2026-11-21 ユーザー指摘「既存のより小さい」）
     private var footerHeight: CGFloat {
-        // 埋め込みは高さが低いので、カテゴリのボタンが押せる大きさを保つ
-        embeddedSize == nil ? keysHeight * 0.12 : max(28, keysHeight * 0.16)
+        keysHeight * 0.12
     }
 
     private var scrollViewHeight: CGFloat {
-        // 埋め込みは渡された高さに収める（フッターとの間の 6pt も引く）
-        embeddedSize == nil ? keysHeight - footerHeight : keysHeight - footerHeight - 6
+        keysHeight - footerHeight
     }
 
     private var verticalCount: Int {
@@ -365,7 +364,9 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
             )
             .frame(height: scrollViewHeight)
 
-            Spacer().frame(height: embeddedSize == nil ? 18 : 6)
+            // 絵文字タブは候補バーを隠すので、この 18pt はバーの分にはみ出して収まる。
+            // 埋め込みは候補バーの下に置くので空けない（空けると下にはみ出す）
+            Spacer().frame(height: embeddedSize == nil ? 18 : 0)
 
             // フッター（ネイティブ風カテゴリバー）
             HStack(spacing: 0) {
