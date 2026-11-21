@@ -19,6 +19,16 @@ enum ChangeKeyboardKeyContent: Equatable {
         case (false, false): .cursorBar
         }
     }
+
+    /// キーに出すラベル
+    var labelType: KeyLabelType {
+        switch self {
+        case .globe: .changeKeyboard
+        case .globeAndEmoji: .changeKeyboardAndEmoji
+        case .emoji: .image("face.smiling")
+        case .cursorBar: .image("arrowtriangle.left.and.line.vertical.and.arrowtriangle.right")
+        }
+    }
 }
 
 struct UnifiedChangeKeyboardKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: UnifiedKeyModelProtocol {
@@ -59,16 +69,7 @@ struct UnifiedChangeKeyboardKeyModel<Extension: ApplicationSpecificKeyboardViewE
     }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states _: VariableStates, color _: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
-        switch content {
-        case .globe:
-            return KeyLabel(.changeKeyboard, width: width)
-        case .globeAndEmoji:
-            return KeyLabel(.changeKeyboardAndEmoji, width: width)
-        case .emoji:
-            return KeyLabel(.image("face.smiling"), width: width)
-        case .cursorBar:
-            return KeyLabel(.image("arrowtriangle.left.and.line.vertical.and.arrowtriangle.right"), width: width)
-        }
+        KeyLabel(content.labelType, width: width)
     }
     func backgroundStyleWhenUnpressed<ThemeExtension>(states _: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         (theme.specialKeyFillColor.color, theme.specialKeyFillColor.blendMode)

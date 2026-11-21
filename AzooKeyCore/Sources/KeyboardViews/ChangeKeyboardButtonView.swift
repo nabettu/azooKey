@@ -101,7 +101,6 @@ struct EmojiTabButtonView<Extension: ApplicationSpecificKeyboardViewExtension>: 
     func makeUIView(context: Context) -> UIButton {
         let button = UIButton(type: .custom)
         button.addTarget(context.coordinator, action: #selector(Coordinator.tapped), for: .touchUpInside)
-        button.accessibilityLabel = "Emoji"
         updateUIView(button, context: context)
         return button
     }
