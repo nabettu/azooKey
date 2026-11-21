@@ -93,10 +93,22 @@ public struct KeyLabel<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
     /// 英語フリック時の入力キー用フォントサイズ（flick_abcタブかつ.largeの場合のみ縮小）
     private var inputKeyViewFontSize: CGFloat {
         let base = Extension.SettingProvider.keyViewFontSize
-        if base != -1, textSize == .large, variableStates.tabManager.existentialTab() == .flick_abc {
+        if base != -1, textSize == .large, isEnglishFlickTab {
             return base * 0.75
         }
         return base
+    }
+
+    /// 英語フリックのタブか。TypeAI: 両手フリックの英語（custard。言語 en_US・テンキー型）も同じく縮める
+    private var isEnglishFlickTab: Bool {
+        switch variableStates.tabManager.existentialTab() {
+        case .flick_abc:
+            return true
+        case let .custard(custard):
+            return custard.language == .en_US && custard.interface.keyStyle == .tenkeyStyle
+        default:
+            return false
+        }
     }
 
     /// テキストが英語入力キーのラベルかどうか（ASCII英字・記号のみで構成）
