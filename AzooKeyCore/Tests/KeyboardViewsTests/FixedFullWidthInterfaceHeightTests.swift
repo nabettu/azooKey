@@ -1,3 +1,4 @@
+import Combine
 import CustardKit
 import Foundation
 @testable import KeyboardViews
@@ -47,26 +48,41 @@ final class FixedFullWidthInterfaceHeightTests: XCTestCase {
         )
     }
 
-    func test_fullwidthUsesFixedHeight() throws {
+    /// publish された高さの列。最終値だけを見ると「幅由来の高さ → 固定値」と 2 回出す実装でも通ってしまう
+    private func publishedHeights(of states: VariableStates, during action: () -> Void) -> [CGFloat] {
+        var heights: [CGFloat] = []
+        let cancellable = states.$interfaceSize.dropFirst().sink { heights.append($0.height) }
+        action()
+        cancellable.cancel()
+        return heights
+    }
+
+    func test_fullwidthPublishesOnlyFixedHeight() throws {
         let states = try makeStates()
         Design.fixedFullWidthInterfaceHeight = 281
-        states.setResizingMode(.fullwidth)
-        XCTAssertEqual(states.interfaceSize.height, 281, accuracy: 0.001)
+        let heights = publishedHeights(of: states) { states.setResizingMode(.fullwidth) }
+        XCTAssertFalse(heights.isEmpty)
+        XCTAssertEqual(heights, Array(repeating: 281, count: heights.count), "固定値以外の高さを一度でも出すとちらつく")
         XCTAssertEqual(states.maximumHeight, 281, accuracy: 0.001)
     }
 
-    func test_containerWidthUpdateUsesFixedHeight() throws {
+    func test_containerWidthUpdatePublishesOnlyFixedHeight() throws {
         let states = try makeStates()
         Design.fixedFullWidthInterfaceHeight = 281
-        states.setContainerWidth(801, orientation: .horizontal)
-        XCTAssertEqual(states.interfaceSize.height, 281, accuracy: 0.001)
+        let heights = publishedHeights(of: states) { states.setContainerWidth(801, orientation: .horizontal) }
+        XCTAssertFalse(heights.isEmpty)
+        XCTAssertEqual(heights, Array(repeating: 281, count: heights.count))
     }
 
+    /// nil なら従来どおり保存値（無ければ幅由来の高さ）× 高さの設定の倍率
     func test_nilKeepsAzooKeyHeight() throws {
         let states = try makeStates()
         Design.fixedFullWidthInterfaceHeight = nil
         states.setResizingMode(.fullwidth)
-        XCTAssertNotEqual(states.interfaceSize.height, 281, accuracy: 0.001)
-        XCTAssertGreaterThan(states.interfaceSize.height, 0)
+        let stored = states.keyboardInternalSettingManager.oneHandedModeSetting
+            .heightItem(orientation: .horizontal).height
+        let expected = (stored ?? Design.keyboardHeight(context: states.layoutContext))
+            * states.heightScaleFromKeyboardHeightSetting
+        XCTAssertEqual(states.interfaceSize.height, expected, accuracy: 0.001)
     }
 }
