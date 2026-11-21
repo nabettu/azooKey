@@ -102,6 +102,7 @@ public struct KeyLabel<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
     @Environment(\.userActionManager) private var action
     @EnvironmentObject private var variableStates: VariableStates
     @Environment(\.splitKeyGap) private var splitKeyGap
+    @Environment(\.splitKeyPressChange) private var splitKeyPressChange
 
     private var mainKeyColor: Color {
         textColor ?? theme.textColor.color
@@ -211,11 +212,13 @@ public struct KeyLabel<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
                 (self.action.makeChangeKeyboardButtonView() as ChangeKeyboardButtonView<Extension>)
                     .foregroundStyle(mainKeyColor)
                     .environment(\.changeKeyboardIconMaxSize, iconSize * scale)
+                    .environment(\.keyButtonPressChange) { [splitKeyPressChange] in splitKeyPressChange?(.leading, $0) }
                     .frame(width: halfWidth)
                 EmojiTabButtonView<Extension>(size: iconSize * scale) {
                     KeyboardFeedback<Extension>.tabOrOtherKey()
                     self.action.registerAction(.moveTab(.system(.emoji_tab)), variableStates: self.variableStates)
                 }
+                .environment(\.keyButtonPressChange) { [splitKeyPressChange] in splitKeyPressChange?(.trailing, $0) }
                 .frame(width: halfWidth)
             }
 

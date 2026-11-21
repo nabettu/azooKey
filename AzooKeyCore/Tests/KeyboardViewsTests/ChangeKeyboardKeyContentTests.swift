@@ -1,4 +1,5 @@
 @testable import KeyboardViews
+import UIKit
 import XCTest
 
 /// キー (0,3) に何を出すか。地球儀を自前で描く端末（iPhone Duo・ホームボタンの iPhone・iPad）でも
@@ -54,5 +55,42 @@ final class ChangeKeyboardKeyContentTests: XCTestCase {
         // 2 つのキーの間をほかのキーと同じ隙間にする
         XCTAssertEqual(KeyLabelType.splitHalfWidth(totalWidth: 69, gap: 5), 32)
         XCTAssertEqual(KeyLabelType.splitHalfWidth(totalWidth: 4, gap: 6), 0)
+    }
+
+    /// 分割キーは押した側（地球儀か絵文字）の背景だけを押した色にする
+    func test_splitKeyHalf_onlyPressedHalfIsHighlighted() {
+        XCTAssertTrue(SplitKeyHalf.leading.isHighlighted(pressedHalves: [.leading]))
+        XCTAssertFalse(SplitKeyHalf.trailing.isHighlighted(pressedHalves: [.leading]))
+        XCTAssertTrue(SplitKeyHalf.trailing.isHighlighted(pressedHalves: [.trailing]))
+        XCTAssertFalse(SplitKeyHalf.leading.isHighlighted(pressedHalves: []))
+        XCTAssertFalse(SplitKeyHalf.trailing.isHighlighted(pressedHalves: []))
+    }
+
+    /// 左右を別の指で押して片方を離しても、押している側の色は残す（ai-review の P2）
+    func test_splitKeyHalf_releasingOneKeepsTheOther() {
+        var pressed: Set<SplitKeyHalf> = []
+        pressed = SplitKeyHalf.updated(pressed, half: .leading, isPressed: true)
+        pressed = SplitKeyHalf.updated(pressed, half: .trailing, isPressed: true)
+        pressed = SplitKeyHalf.updated(pressed, half: .leading, isPressed: false)
+        XCTAssertEqual(pressed, [.trailing])
+        pressed = SplitKeyHalf.updated(pressed, half: .trailing, isPressed: false)
+        XCTAssertEqual(pressed, [])
+    }
+
+    /// ボタンの押下イベントを「押している / いない」に直す（指をずらして外れたら離した扱い）
+    @MainActor
+    func test_buttonPressObserver_mapsControlEvents() {
+        let button = UIButton(type: .custom)
+        let observer = ButtonPressObserver()
+        var log: [Bool] = []
+        observer.onChange = { log.append($0) }
+        observer.attach(to: button)
+        for event: UIControl.Event in [.touchDown, .touchDragExit, .touchDragEnter, .touchUpInside, .touchDown, .touchCancel, .touchDown, .touchUpOutside] {
+            // ホストアプリの無いテストでは sendActions が届かないので、登録された動作を直接呼ぶ
+            for name in button.actions(forTarget: observer, forControlEvent: event) ?? [] {
+                observer.perform(NSSelectorFromString(name))
+            }
+        }
+        XCTAssertEqual(log, [true, false, true, false, true, false, true, false])
     }
 }

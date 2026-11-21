@@ -26,6 +26,7 @@ public struct ChangeKeyboardButtonView<Extension: ApplicationSpecificKeyboardVie
     private let size: CGFloat
     @Environment(Extension.Theme.self) private var theme
     @Environment(\.changeKeyboardIconMaxSize) private var maxIconSize
+    @Environment(\.keyButtonPressChange) private var pressChange
 
     private var iconSize: CGFloat {
         min(size, maxIconSize)
@@ -55,11 +56,18 @@ public struct ChangeKeyboardButtonView<Extension: ApplicationSpecificKeyboardVie
         }
     }
 
+    public func makeCoordinator() -> ButtonPressObserver {
+        ButtonPressObserver()
+    }
+
     public func makeUIView(context: Context) -> UIButton {
         let button = UIButton(type: .custom)
         if let selector {
             button.addTarget(nil, action: selector, for: .allTouchEvents)
         }
+        // 分割キーで、押した側の背景だけを押した色にするため
+        context.coordinator.onChange = pressChange
+        context.coordinator.attach(to: button)
         let largeConfig = UIImage.SymbolConfiguration(pointSize: iconSize, weight: weight, scale: .default)
         let largeBoldDoc = UIImage(systemName: "globe", withConfiguration: largeConfig)
         button.setImage(largeBoldDoc, for: .normal)
@@ -69,6 +77,7 @@ public struct ChangeKeyboardButtonView<Extension: ApplicationSpecificKeyboardVie
     }
 
     public func updateUIView(_ uiView: UIButton, context: Context) {
+        context.coordinator.onChange = pressChange
         let largeConfig = UIImage.SymbolConfiguration(pointSize: iconSize, weight: weight, scale: .default)
         let largeBoldDoc = UIImage(systemName: "globe", withConfiguration: largeConfig)
         uiView.setImage(largeBoldDoc, for: .normal)
@@ -82,8 +91,10 @@ struct EmojiTabButtonView<Extension: ApplicationSpecificKeyboardViewExtension>: 
     let size: CGFloat
     let onTap: () -> Void
     @Environment(Extension.Theme.self) private var theme
+    @Environment(\.keyButtonPressChange) private var pressChange
 
-    final class Coordinator: NSObject {
+    @MainActor final class Coordinator: NSObject {
+        let pressObserver = ButtonPressObserver()
         var onTap: () -> Void
         init(onTap: @escaping () -> Void) {
             self.onTap = onTap
@@ -118,12 +129,14 @@ struct EmojiTabButtonView<Extension: ApplicationSpecificKeyboardViewExtension>: 
     func makeUIView(context: Context) -> UIButton {
         let button = UIButton(type: .custom)
         button.addTarget(context.coordinator, action: #selector(Coordinator.tapped), for: .touchUpInside)
+        context.coordinator.pressObserver.attach(to: button)
         updateUIView(button, context: context)
         return button
     }
 
     func updateUIView(_ uiView: UIButton, context: Context) {
         context.coordinator.onTap = onTap
+        context.coordinator.pressObserver.onChange = pressChange
         uiView.setImage(image, for: .normal)
         uiView.tintColor = UIColor(theme.textColor.color)
     }
