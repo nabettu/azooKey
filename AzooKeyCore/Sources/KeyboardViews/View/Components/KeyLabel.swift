@@ -22,7 +22,24 @@ public enum KeyLabelType: Sendable, Equatable {
     case selectable(String, String)
 }
 
+private struct SplitKeyGapKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 0
+}
+
+extension EnvironmentValues {
+    /// 半分ずつ並べたキーの間の隙間（キーの外側から、ほかのキーと同じ間隔を渡す）
+    var splitKeyGap: CGFloat {
+        get { self[SplitKeyGapKey.self] }
+        set { self[SplitKeyGapKey.self] = newValue }
+    }
+}
+
 extension KeyLabelType {
+    /// 半分ずつ並べたキーの片方の幅。間に gap を空ける
+    static func splitHalfWidth(totalWidth: CGFloat, gap: CGFloat) -> CGFloat {
+        max(0, (totalWidth - gap) / 2)
+    }
+
     /// 地球儀と絵文字を半分ずつ並べるときのアイコンの縮小率。左右に 4pt ずつ余白を残して収める（1 より大きくはしない）
     static func splitIconScale(halfWidth: CGFloat, iconSize: CGFloat) -> CGFloat {
         guard iconSize > 0 else { return 1 }
@@ -84,6 +101,7 @@ public struct KeyLabel<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
     @Environment(Extension.Theme.self) private var theme
     @Environment(\.userActionManager) private var action
     @EnvironmentObject private var variableStates: VariableStates
+    @Environment(\.splitKeyGap) private var splitKeyGap
 
     private var mainKeyColor: Color {
         textColor ?? theme.textColor.color
@@ -186,18 +204,19 @@ public struct KeyLabel<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
             // 右半分は絵文字タブへ切り替えるボタン。どちらも UIKit のボタンが自分でタッチを受ける
             // 片手モードで幅が狭いときは、半分の幅に収まるようにアイコンを縮める（地球儀の大きさはホストが決めるので scaleEffect で揃える）
             let iconSize = Design.fonts.iconFontSize(keyViewFontSizePreference: Extension.SettingProvider.keyViewFontSize)
-            let scale = KeyLabelType.splitIconScale(halfWidth: width / 2, iconSize: iconSize)
-            HStack(spacing: 0) {
+            let halfWidth = KeyLabelType.splitHalfWidth(totalWidth: width, gap: splitKeyGap)
+            let scale = KeyLabelType.splitIconScale(halfWidth: halfWidth, iconSize: iconSize)
+            HStack(spacing: splitKeyGap) {
                 (self.action.makeChangeKeyboardButtonView() as ChangeKeyboardButtonView<Extension>)
                     .foregroundStyle(mainKeyColor)
                     .scaleEffect(scale)
-                    .frame(width: width / 2)
+                    .frame(width: halfWidth)
                 EmojiTabButtonView<Extension>(size: iconSize) {
                     KeyboardFeedback<Extension>.tabOrOtherKey()
                     self.action.registerAction(.moveTab(.system(.emoji_tab)), variableStates: self.variableStates)
                 }
                 .scaleEffect(scale)
-                .frame(width: width / 2)
+                .frame(width: halfWidth)
             }
 
         case let .selectable(primary, secondery):

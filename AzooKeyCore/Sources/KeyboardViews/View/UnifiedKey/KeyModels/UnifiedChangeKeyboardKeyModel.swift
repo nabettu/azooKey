@@ -20,6 +20,11 @@ enum ChangeKeyboardKeyContent: Equatable {
         }
     }
 
+    /// 背景を左右 2 つのキーに分けて描くか
+    var splitsBackgroundInHalves: Bool {
+        self == .globeAndEmoji
+    }
+
     /// キーに出すラベル
     var labelType: KeyLabelType {
         switch self {
@@ -43,6 +48,9 @@ struct UnifiedChangeKeyboardKeyModel<Extension: ApplicationSpecificKeyboardViewE
             needsInputModeSwitchKey: SemiStaticStates.shared.needsInputModeSwitchKey,
             useEmojiKeyInsteadOfCursorBar: Extension.SettingProvider.useEmojiKeyInsteadOfCursorBar
         )
+    }
+    @MainActor var splitsBackgroundInHalves: Bool {
+        content.splitsBackgroundInHalves
     }
     func pressActions(variableStates: VariableStates) -> [ActionType] {
         switch content {

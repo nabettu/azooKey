@@ -42,4 +42,17 @@ final class ChangeKeyboardKeyContentTests: XCTestCase {
         XCTAssertEqual(KeyLabelType.splitIconScale(halfWidth: 11, iconSize: 21), 3.0 / 21, accuracy: 0.0001)
         XCTAssertEqual(KeyLabelType.splitIconScale(halfWidth: 4, iconSize: 21), 0)
     }
+
+    func test_onlyGlobeAndEmojiSplitsBackground() {
+        XCTAssertTrue(ChangeKeyboardKeyContent.globeAndEmoji.splitsBackgroundInHalves)
+        XCTAssertFalse(ChangeKeyboardKeyContent.globe.splitsBackgroundInHalves)
+        XCTAssertFalse(ChangeKeyboardKeyContent.emoji.splitsBackgroundInHalves)
+        XCTAssertFalse(ChangeKeyboardKeyContent.cursorBar.splitsBackgroundInHalves)
+    }
+
+    func test_splitHalfWidth_leavesKeyGapBetweenHalves() {
+        // 2 つのキーの間をほかのキーと同じ隙間にする
+        XCTAssertEqual(KeyLabelType.splitHalfWidth(totalWidth: 69, gap: 5), 32)
+        XCTAssertEqual(KeyLabelType.splitHalfWidth(totalWidth: 4, gap: 6), 0)
+    }
 }
