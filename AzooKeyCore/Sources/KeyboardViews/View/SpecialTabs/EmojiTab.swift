@@ -152,9 +152,13 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
         }
     }
 
+    /// TypeAI: フリック配列の横に埋め込むときの大きさ（`Design.embeddedEmojiPanels`）。nil なら絵文字タブとして全体に出す
+    private let embeddedSize: CGSize?
+
     /// 参考用
     private var keysHeight: CGFloat {
-        TabDependentDesign(
+        if let embeddedSize { return embeddedSize.height }
+        return TabDependentDesign(
             width: 1,
             height: 1,
             interfaceSize: variableStates.interfaceSize,
@@ -163,11 +167,13 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
     }
 
     private var footerHeight: CGFloat {
-        keysHeight * 0.12
+        // 埋め込みは高さが低いので、カテゴリのボタンが押せる大きさを保つ
+        embeddedSize == nil ? keysHeight * 0.12 : max(28, keysHeight * 0.16)
     }
 
     private var scrollViewHeight: CGFloat {
-        keysHeight - footerHeight
+        // 埋め込みは渡された高さに収める（フッターとの間の 6pt も引く）
+        embeddedSize == nil ? keysHeight - footerHeight : keysHeight - footerHeight - 6
     }
 
     private var verticalCount: Int {
@@ -185,7 +191,18 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
 
     @State private var selectedGenre: Genre = .smileys
 
-    init() {}
+    init() {
+        self.embeddedSize = nil
+    }
+
+    /// TypeAI: フリック配列の横に埋め込む。「戻る」キーは出さない（タブを移っていないので戻り先が無い）
+    init(embeddedSize: CGSize) {
+        self.embeddedSize = embeddedSize
+    }
+
+    private var panelWidth: CGFloat {
+        embeddedSize?.width ?? variableStates.interfaceSize.width
+    }
     // 正方形のキーにする
     /// 行のあいだの間隔（`EmojiScrollContent` の `GridItem` と `LazyHGrid` の spacing）
     fileprivate static var rowSpacing: CGFloat { 5 }
@@ -300,7 +317,8 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
     }
 
     private var functionKeyWidth: CGFloat {
-        variableStates.interfaceSize.width / 13
+        // 埋め込みは幅が半分ほどなので、削除キーが小さくなりすぎないよう割る数を減らす
+        panelWidth / (embeddedSize == nil ? 13 : 7)
     }
 
     private func deleteKey() -> SimpleKeyView<Extension> {
@@ -342,15 +360,18 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                 allGenre: allGenre,
                 keySize: keySize,
                 verticalCount: verticalCount,
+                simplyInsert: embeddedSize != nil,
                 onProxyReady: { self.scrollProxy = $0 }
             )
             .frame(height: scrollViewHeight)
 
-            Spacer().frame(height: 18)
+            Spacer().frame(height: embeddedSize == nil ? 18 : 6)
 
             // フッター（ネイティブ風カテゴリバー）
             HStack(spacing: 0) {
-                backTabKey()
+                if embeddedSize == nil {
+                    backTabKey()
+                }
                 ForEach(allGenre, id: \.self) { genre in
                     if !self.emojis[genre, default: []].isEmpty {
                         genreButton(genre)
@@ -361,16 +382,19 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
             .frame(height: footerHeight)
             .padding(.horizontal, 4)
         }
-        .frame(width: variableStates.interfaceSize.width)
+        .frame(width: panelWidth)
         .onAppear {
             self.updateEmojiData()
             if !self.emojis[.recent, default: []].isEmpty {
                 self.selectedGenre = .recent
             }
+            // 埋め込みのときはフリックで変換中なので、候補を消さない
+            guard embeddedSize == nil else { return }
             variableStates.resultModel.setResults([])
             variableStates.barState = .none
         }
         .onDisappear {
+            guard embeddedSize == nil else { return }
             variableStates.resultModel.setResults([])
         }
     }
@@ -437,10 +461,15 @@ private struct GenreKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
 }
 
 private struct EmojiKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: SimpleKeyModelProtocol {
-    init(_ emoji: String, base: String) {
+    init(_ emoji: String, base: String, simplyInsert: Bool = false) {
         self.emoji = emoji
         self.base = base
+        self.simplyInsert = simplyInsert
     }
+
+    /// TypeAI: フリック配列の横に埋め込んだときは、変換中の文字を確定してからそのまま入れる。
+    /// 日本語のタブのまま押すので、普通に入れると変換中の文字に混ざり、変換で絵文字が化けた
+    private let simplyInsert: Bool
 
     private let emoji: String
     private let base: String
@@ -465,7 +494,7 @@ private struct EmojiKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
         }
     }
     func pressActions(variableStates: VariableStates) -> [ActionType] {
-        [.input(emoji)]
+        [.input(emoji, simplyInsert: simplyInsert)]
     }
     func longPressActions(variableStates: VariableStates) -> LongpressActionType {
         .none
@@ -482,6 +511,7 @@ private struct EmojiScrollContent<Extension: ApplicationSpecificKeyboardViewExte
     let allGenre: [EmojiTab<Extension>.Genre]
     let keySize: CGFloat
     let verticalCount: Int
+    var simplyInsert = false
     let onProxyReady: (ScrollViewProxy) -> Void
 
     var body: some View {
@@ -494,7 +524,7 @@ private struct EmojiScrollContent<Extension: ApplicationSpecificKeyboardViewExte
                         if !models.isEmpty {
                             LazyHGrid(rows: Array(repeating: gridItem, count: verticalCount), spacing: 5) {
                                 ForEach(models) { model in
-                                    SimpleKeyView<Extension>(model: EmojiKeyModel<Extension>(model.emoji, base: model.base), width: keySize, height: keySize)
+                                    SimpleKeyView<Extension>(model: EmojiKeyModel<Extension>(model.emoji, base: model.base, simplyInsert: simplyInsert), width: keySize, height: keySize)
                                 }
                             }
                             .padding(.horizontal, 3)

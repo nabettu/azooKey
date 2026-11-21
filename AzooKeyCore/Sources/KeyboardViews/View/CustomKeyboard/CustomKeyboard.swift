@@ -315,7 +315,21 @@ struct CustomKeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>: 
         switch custard.interface.keyLayout {
         case .gridFit:
             let unifiedModels = custard.interface.unifiedKeyModels(extension: Extension.self)
-            UnifiedKeysView(models: unifiedModels, tabDesign: tabDesign) { keyView, _ in keyView }
+            let design = tabDesign
+            UnifiedKeysView(models: unifiedModels, tabDesign: design) { keyView, _ in keyView }
+                .overlay(alignment: .topLeading) {
+                    // TypeAI: 空けた列に絵文字の一覧を出す（`Design.embeddedEmojiPanels`）
+                    if let panel = Design.embeddedEmojiPanels[custard.identifier] {
+                        let x = (design.keyViewWidth + design.horizontalSpacing) * CGFloat(panel.column)
+                        let size = CGSize(
+                            width: design.keyViewWidth(widthCount: CGFloat(panel.width)),
+                            height: design.keysHeight
+                        )
+                        EmojiTab<Extension>(embeddedSize: size)
+                            .frame(width: size.width, height: size.height)
+                            .offset(x: x)
+                    }
+                }
         case let .gridScroll(value):
             let models = (0..<custard.interface.keys.count).compactMap { index in
                 (custard.interface.keys[.gridScroll(GridScrollPositionSpecifier(index))]).map {($0, index)}

@@ -180,6 +180,18 @@ public enum Design {
     /// 詰めた画面（iPhone Duo の内側で 39pt）では AI ボタンや候補が窮屈になる。0 なら下限なし
     nonisolated(unsafe) public static var minimumKeyboardBarHeight: CGFloat = 0
 
+    /// TypeAI: custard の格子のうち、絵文字の一覧を埋め込む列（custard の identifier ごと）。
+    /// フリック配列を片側に寄せ、空けた側に絵文字タブの中身を出す（iPhone Duo の内側・iPad）
+    public struct EmbeddedEmojiPanel: Sendable, Equatable {
+        public var column: Int
+        public var width: Int
+        public init(column: Int, width: Int) {
+            self.column = column
+            self.width = width
+        }
+    }
+    nonisolated(unsafe) public static var embeddedEmojiPanels: [String: EmbeddedEmojiPanel] = [:]
+
     /// This property calculate suitable width for normal keyView.
     public static func keyboardScreenHeight(
         context: KeyboardLayoutContext,
