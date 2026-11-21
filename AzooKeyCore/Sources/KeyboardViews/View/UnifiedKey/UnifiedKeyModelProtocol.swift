@@ -43,6 +43,9 @@ public protocol UnifiedKeyModelProtocol<Extension> {
 
     // 長押し時にカーソル移動トラッキングモードに入るかどうか
     @MainActor var supportsCursorTracking: Bool { get }
+
+    // キーの背景を左右 2 つに分けて描くか（地球儀と絵文字を半分ずつ並べるキー）
+    @MainActor var splitsBackgroundInHalves: Bool { get }
 }
 
 public extension UnifiedKeyModelProtocol {
@@ -55,6 +58,7 @@ public extension UnifiedKeyModelProtocol {
     }
 
     @MainActor var supportsCursorTracking: Bool { false }
+    @MainActor var splitsBackgroundInHalves: Bool { false }
 
     // Default capabilities derived from variationSpace and longPressActions
     @MainActor func hasFlickVariations(variableStates: VariableStates) -> Bool {

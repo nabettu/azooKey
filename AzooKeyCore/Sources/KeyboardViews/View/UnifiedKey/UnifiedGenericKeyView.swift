@@ -640,7 +640,7 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
         }
     }
 
-    public var body: some View {
+    private func keyBackground(size: CGSize) -> KeyBackground {
         KeyBackground(
             backgroundColor: keyBackgroundStyle.color,
             borderColor: theme.borderColor.color,
@@ -654,13 +654,36 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
             ),
             blendMode: keyBackgroundStyle.blendMode
         )
+    }
+
+    /// 地球儀と絵文字を半分ずつ並べるキーは、背景も 2 つのキーに分けて描く（間はほかのキーと同じ隙間）
+    @ViewBuilder private var keyBackgroundView: some View {
+        if model.splitsBackgroundInHalves {
+            let gap = tabDesign.horizontalSpacing
+            let half = CGSize(width: KeyLabelType.splitHalfWidth(totalWidth: size.width, gap: gap), height: size.height)
+            HStack(spacing: gap) {
+                keyBackground(size: half)
+                keyBackground(size: half)
+            }
+            .frame(width: size.width, height: size.height)
+            .contentShape(Rectangle())
+        } else {
+            keyBackground(size: size)
+        }
+    }
+
+    public var body: some View {
+        keyBackgroundView
         .modifier(KeyPressGestureModifier(
             hitSize: CGSize(width: size.width + tabDesign.horizontalSpacing, height: size.height + tabDesign.verticalSpacing),
             flick: flickGesture,
             linear: qwertyGesture,
             onCancelled: cancelPress
         ))
-        .overlay { self.model.label(width: size.width, theme: theme, states: variableStates, color: nil) }
+        .overlay {
+            self.model.label(width: size.width, theme: theme, states: variableStates, color: nil)
+                .environment(\.splitKeyGap, model.splitsBackgroundInHalves ? tabDesign.horizontalSpacing : 0)
+        }
         .overlay {
             // カーソルトラッキング中: ← → をキー上に表示
             if isCursorTracking {

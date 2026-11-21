@@ -9,10 +9,27 @@
 import Foundation
 import SwiftUI
 
+private struct ChangeKeyboardIconMaxSizeKey: EnvironmentKey {
+    static let defaultValue: CGFloat = .infinity
+}
+
+extension EnvironmentValues {
+    /// 地球儀のアイコンの大きさの上限。分割キーで半分の幅に収めるときに使う（ボタンの押せる範囲は縮めない）
+    var changeKeyboardIconMaxSize: CGFloat {
+        get { self[ChangeKeyboardIconMaxSizeKey.self] }
+        set { self[ChangeKeyboardIconMaxSizeKey.self] = newValue }
+    }
+}
+
 public struct ChangeKeyboardButtonView<Extension: ApplicationSpecificKeyboardViewExtension>: UIViewRepresentable {
     private let selector: Selector?
     private let size: CGFloat
     @Environment(Extension.Theme.self) private var theme
+    @Environment(\.changeKeyboardIconMaxSize) private var maxIconSize
+
+    private var iconSize: CGFloat {
+        min(size, maxIconSize)
+    }
 
     public init(selector: Selector? = nil, size: CGFloat) {
         self.selector = selector
@@ -43,7 +60,7 @@ public struct ChangeKeyboardButtonView<Extension: ApplicationSpecificKeyboardVie
         if let selector {
             button.addTarget(nil, action: selector, for: .allTouchEvents)
         }
-        let largeConfig = UIImage.SymbolConfiguration(pointSize: size, weight: weight, scale: .default)
+        let largeConfig = UIImage.SymbolConfiguration(pointSize: iconSize, weight: weight, scale: .default)
         let largeBoldDoc = UIImage(systemName: "globe", withConfiguration: largeConfig)
         button.setImage(largeBoldDoc, for: .normal)
         button.setTitleColor(UIColor(theme.textColor.color), for: [.normal, .highlighted])
@@ -52,7 +69,7 @@ public struct ChangeKeyboardButtonView<Extension: ApplicationSpecificKeyboardVie
     }
 
     public func updateUIView(_ uiView: UIButton, context: Context) {
-        let largeConfig = UIImage.SymbolConfiguration(pointSize: size, weight: weight, scale: .default)
+        let largeConfig = UIImage.SymbolConfiguration(pointSize: iconSize, weight: weight, scale: .default)
         let largeBoldDoc = UIImage(systemName: "globe", withConfiguration: largeConfig)
         uiView.setImage(largeBoldDoc, for: .normal)
         uiView.setTitleColor(UIColor(theme.textColor.color), for: [.normal, .highlighted])
