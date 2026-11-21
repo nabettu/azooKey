@@ -155,7 +155,7 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
     @State private var cursorTrackCount: Double = 0
     @State private var cursorTrackLastX: CGFloat = 0
     /// 分割キー（地球儀と絵文字）で、押している側の半分。中のボタンが知らせる。押した側の背景だけを押した色にする
-    @State private var pressedSplitHalf: SplitKeyHalf?
+    @State private var pressedSplitHalves: Set<SplitKeyHalf> = []
 
     private var longpressDuration: TimeInterval {
         switch self.model.longPressActions(variableStates: variableStates).duration {
@@ -633,12 +633,14 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
     }
 
     /// 分割キーの中のボタンが、押している側を知らせる先
-    private var splitKeyPressChange: (@MainActor (SplitKeyHalf?) -> Void)? {
+    private var splitKeyPressChange: (@MainActor (SplitKeyHalf, Bool) -> Void)? {
         guard model.splitsBackgroundInHalves else {
             return nil
         }
-        let pressed = $pressedSplitHalf
-        return { half in pressed.wrappedValue = half }
+        let pressed = $pressedSplitHalves
+        return { half, isPressed in
+            pressed.wrappedValue = SplitKeyHalf.updated(pressed.wrappedValue, half: half, isPressed: isPressed)
+        }
     }
 
     // MARK: background/label
@@ -673,8 +675,8 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
             let gap = tabDesign.horizontalSpacing
             let half = CGSize(width: KeyLabelType.splitHalfWidth(totalWidth: size.width, gap: gap), height: size.height)
             HStack(spacing: gap) {
-                keyBackground(size: half, isActive: SplitKeyHalf.leading.isHighlighted(pressedHalf: pressedSplitHalf))
-                keyBackground(size: half, isActive: SplitKeyHalf.trailing.isHighlighted(pressedHalf: pressedSplitHalf))
+                keyBackground(size: half, isActive: SplitKeyHalf.leading.isHighlighted(pressedHalves: pressedSplitHalves))
+                keyBackground(size: half, isActive: SplitKeyHalf.trailing.isHighlighted(pressedHalves: pressedSplitHalves))
             }
             .frame(width: size.width, height: size.height)
             .contentShape(Rectangle())

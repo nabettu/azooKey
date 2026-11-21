@@ -4,19 +4,30 @@ import UIKit
 #endif
 
 /// 地球儀と絵文字を半分ずつ並べるキーの、左右どちらの半分か（TypeAI）
-enum SplitKeyHalf: Equatable, Sendable {
+enum SplitKeyHalf: Hashable, Sendable {
     case leading
     case trailing
 
     /// この半分を押した色にするか。中身の UIButton がタッチを先に受けるので、キー全体の押下判定ではなく
     /// ボタンが知らせた「押している側」だけで決める（隙間など、何も起きない所を押しても色は付けない）
-    func isHighlighted(pressedHalf: SplitKeyHalf?) -> Bool {
-        pressedHalf == self
+    func isHighlighted(pressedHalves: Set<SplitKeyHalf>) -> Bool {
+        pressedHalves.contains(self)
+    }
+
+    /// 押している側の集合を更新する。左右を別の指で押せるので、片方を離してももう片方は残す
+    static func updated(_ pressedHalves: Set<SplitKeyHalf>, half: SplitKeyHalf, isPressed: Bool) -> Set<SplitKeyHalf> {
+        var result = pressedHalves
+        if isPressed {
+            result.insert(half)
+        } else {
+            result.remove(half)
+        }
+        return result
     }
 }
 
 private struct SplitKeyPressChangeKey: EnvironmentKey {
-    static let defaultValue: (@MainActor (SplitKeyHalf?) -> Void)? = nil
+    static let defaultValue: (@MainActor (SplitKeyHalf, Bool) -> Void)? = nil
 }
 
 private struct KeyButtonPressChangeKey: EnvironmentKey {
@@ -24,8 +35,8 @@ private struct KeyButtonPressChangeKey: EnvironmentKey {
 }
 
 extension EnvironmentValues {
-    /// 分割キーで押している側が変わったときに呼ぶ（離したら nil）。キーの背景が受け取る
-    var splitKeyPressChange: (@MainActor (SplitKeyHalf?) -> Void)? {
+    /// 分割キーの左右どちらかを押した・離したときに呼ぶ。キーの背景が受け取る
+    var splitKeyPressChange: (@MainActor (SplitKeyHalf, Bool) -> Void)? {
         get { self[SplitKeyPressChangeKey.self] }
         set { self[SplitKeyPressChangeKey.self] = newValue }
     }
