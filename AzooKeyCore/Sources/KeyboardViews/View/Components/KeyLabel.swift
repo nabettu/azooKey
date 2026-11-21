@@ -202,20 +202,20 @@ public struct KeyLabel<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
         case .changeKeyboardAndEmoji:
             // 左半分は地球儀（UIKit のボタン。タップで次のキーボード・長押しで一覧）、
             // 右半分は絵文字タブへ切り替えるボタン。どちらも UIKit のボタンが自分でタッチを受ける
-            // 片手モードで幅が狭いときは、半分の幅に収まるようにアイコンを縮める（地球儀の大きさはホストが決めるので scaleEffect で揃える）
+            // 片手モードで幅が狭いときは、半分の幅に収まるようにアイコンを縮める
             let iconSize = Design.fonts.iconFontSize(keyViewFontSizePreference: Extension.SettingProvider.keyViewFontSize)
             let halfWidth = KeyLabelType.splitHalfWidth(totalWidth: width, gap: splitKeyGap)
             let scale = KeyLabelType.splitIconScale(halfWidth: halfWidth, iconSize: iconSize)
+            // アイコンの画像だけを縮める（scaleEffect だとボタンの押せる範囲まで縮む。ai-review の指摘）
             HStack(spacing: splitKeyGap) {
                 (self.action.makeChangeKeyboardButtonView() as ChangeKeyboardButtonView<Extension>)
                     .foregroundStyle(mainKeyColor)
-                    .scaleEffect(scale)
+                    .environment(\.changeKeyboardIconMaxSize, iconSize * scale)
                     .frame(width: halfWidth)
-                EmojiTabButtonView<Extension>(size: iconSize) {
+                EmojiTabButtonView<Extension>(size: iconSize * scale) {
                     KeyboardFeedback<Extension>.tabOrOtherKey()
                     self.action.registerAction(.moveTab(.system(.emoji_tab)), variableStates: self.variableStates)
                 }
-                .scaleEffect(scale)
                 .frame(width: halfWidth)
             }
 
