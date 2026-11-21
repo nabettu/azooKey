@@ -176,13 +176,11 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
     }
 
     private var verticalCount: Int {
-        // 埋め込みは縦長の枠なので、Duo の内側（横向き扱い）でも iPhone の縦向きと同じ 5 行にする
-        // （2026-11-21 ユーザー指摘「Duo じゃない端末だと小さくして 5 行」）
-        if embeddedSize != nil { return 5 }
-        switch variableStates.keyboardOrientation {
-        case .vertical: return 5
-        case .horizontal: return 3
-        }
+        emojiTabVerticalCount(
+            isEmbedded: embeddedSize != nil,
+            orientation: variableStates.keyboardOrientation,
+            override: Design.emojiTabVerticalCount
+        )
     }
 
     private var allGenre: [Genre] {
@@ -563,5 +561,18 @@ private extension EmojiTabExpandModePreference.Level {
         case .large:
             return "arrow.down.right.and.arrow.up.left"
         }
+    }
+}
+
+/// 絵文字タブの行数。
+/// 埋め込みは縦長の枠なので、Duo の内側（横向き扱い）でも iPhone の縦向きと同じ 5 行にする
+/// （2026-11-21 ユーザー指摘「Duo じゃない端末だと小さくして 5 行」）。
+/// ホストが行数を決めていれば（`Design.emojiTabVerticalCount`）それに従う
+func emojiTabVerticalCount(isEmbedded: Bool, orientation: KeyboardOrientation, override: Int?) -> Int {
+    if isEmbedded { return 5 }
+    if let override, override > 0 { return override }
+    switch orientation {
+    case .vertical: return 5
+    case .horizontal: return 3
     }
 }
