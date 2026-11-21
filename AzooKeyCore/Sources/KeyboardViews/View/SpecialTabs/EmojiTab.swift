@@ -176,6 +176,9 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
     }
 
     private var verticalCount: Int {
+        // 埋め込みは縦長の枠なので、Duo の内側（横向き扱い）でも iPhone の縦向きと同じ 5 行にする
+        // （2026-11-21 ユーザー指摘「Duo じゃない端末だと小さくして 5 行」）
+        if embeddedSize != nil { return 5 }
         switch variableStates.keyboardOrientation {
         case .vertical: return 5
         case .horizontal: return 3
@@ -381,7 +384,7 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                 deleteKey()
             }
             .frame(height: footerHeight)
-            .padding(.horizontal, 4)
+            .padding(.horizontal, embeddedSize == nil ? 4 : 0)
         }
         .frame(width: panelWidth)
         .onAppear {
@@ -528,12 +531,14 @@ private struct EmojiScrollContent<Extension: ApplicationSpecificKeyboardViewExte
                                     SimpleKeyView<Extension>(model: EmojiKeyModel<Extension>(model.emoji, base: model.base, simplyInsert: simplyInsert), width: keySize, height: keySize)
                                 }
                             }
-                            .padding(.horizontal, 3)
+                            .padding(.leading, simplyInsert && genre == allGenre.first(where: { !emojis[$0, default: []].isEmpty }) ? 0 : 3)
+                            .padding(.trailing, 3)
                             .id("genre_\(genre.rawValue)")
                         }
                     }
                 }
-                .padding(.horizontal, 5)
+                // 埋め込みは左端をフリック側のキーの端に揃える（余白を足すと右に寄って見える）
+                .padding(.horizontal, simplyInsert ? 0 : 5)
                 .onAppear { onProxyReady(reader) }
             }
         }
