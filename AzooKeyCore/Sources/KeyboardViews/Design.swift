@@ -114,6 +114,11 @@ public struct TabDependentDesign {
         case .horizontal:
             coefficient = (8 + horizontalKeyCountForSizing) / (10 + horizontalKeyCountForSizing * 1.3)
         }
+        if Design.fillsKeyboardWidth {
+            // TypeAI: 端の余白を「キー間の半分」にして、キーを幅いっぱいに並べる。
+            // 横向きの式は端に幅の 2.5% ずつ（iPhone Duo の内側で 20pt）残し、横に広い画面で隙間に見えた
+            return (interfaceWidth - keyViewWidth * horizontalKeyCount) / horizontalKeyCount
+        }
         return (interfaceWidth - keyViewWidth * horizontalKeyCount) / (horizontalKeyCount - 1) * coefficient
     }
 
@@ -166,6 +171,14 @@ public enum Design {
     /// ホスト側から `view.safeAreaInsets.bottom` を入れること。
     /// keyboardScreenHeight(context:) がメインアクター外でも呼ばれるので nonisolated(unsafe)
     nonisolated(unsafe) public static var keyboardScreenBottomPadding: CGFloat = 0
+
+    /// TypeAI: キーを幅いっぱいに並べる（端の余白をキー間の半分にする）。
+    /// iPhone Duo のような横に広い画面でだけホストが立てる
+    nonisolated(unsafe) public static var fillsKeyboardWidth: Bool = false
+
+    /// TypeAI: 候補バーの高さの下限。バーは中身の高さに比例するので、高さを固定して
+    /// 詰めた画面（iPhone Duo の内側で 39pt）では AI ボタンや候補が窮屈になる。0 なら下限なし
+    nonisolated(unsafe) public static var minimumKeyboardBarHeight: CGFloat = 0
 
     /// This property calculate suitable width for normal keyView.
     public static func keyboardScreenHeight(
@@ -228,6 +241,13 @@ public enum Design {
     }
     /// バー部分の高さは`interfaceHeight`に基づいて決定する
     static func keyboardBarHeight(
+        interfaceHeight: CGFloat,
+        context: KeyboardLayoutContext
+    ) -> CGFloat {
+        max(minimumKeyboardBarHeight, proportionalKeyboardBarHeight(interfaceHeight: interfaceHeight, context: context))
+    }
+
+    private static func proportionalKeyboardBarHeight(
         interfaceHeight: CGFloat,
         context: KeyboardLayoutContext
     ) -> CGFloat {
