@@ -17,6 +17,8 @@ public enum KeyLabelType: Sendable, Equatable {
     case image(String)
     case customImage(String)
     case changeKeyboard
+    /// 地球儀と絵文字を半分ずつ並べたキー（TypeAI: 地球儀を自前で描く端末でも絵文字キーを消さない）
+    case changeKeyboardAndEmoji
     case selectable(String, String)
 }
 
@@ -170,6 +172,22 @@ public struct KeyLabel<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
         case .changeKeyboard:
             (self.action.makeChangeKeyboardButtonView() as ChangeKeyboardButtonView<Extension>)
                 .foregroundStyle(mainKeyColor)
+
+        case .changeKeyboardAndEmoji:
+            // 左半分は地球儀（UIKit のボタン。タップで次のキーボード・長押しで一覧）、
+            // 右半分は絵文字タブへ切り替えるボタン。どちらも UIKit のボタンが自分でタッチを受ける
+            HStack(spacing: 0) {
+                (self.action.makeChangeKeyboardButtonView() as ChangeKeyboardButtonView<Extension>)
+                    .foregroundStyle(mainKeyColor)
+                    .frame(width: width / 2)
+                EmojiTabButtonView<Extension>(
+                    size: Design.fonts.iconFontSize(keyViewFontSizePreference: Extension.SettingProvider.keyViewFontSize)
+                ) {
+                    KeyboardFeedback<Extension>.tabOrOtherKey()
+                    self.action.registerAction(.moveTab(.system(.emoji_tab)), variableStates: self.variableStates)
+                }
+                .frame(width: width / 2)
+            }
 
         case let .selectable(primary, secondery):
             let font = Design.fonts.keyLabelFont(text: primary + primary, width: width, fontSize: self.textSize, userDecidedSize: keyViewFontSize, theme: theme)
