@@ -3,50 +3,6 @@ import Foundation
 import XCTest
 
 final class OneHandedModeBottomOffsetTests: XCTestCase {
-    func test_bottomHandleTransfersHeightToBottomOffset() throws {
-        let result = try XCTUnwrap(
-            OneHandedVerticalResizeResult.movingBottomHandle(
-                initialHeight: 240,
-                initialBottomOffset: 0,
-                translation: -40,
-                minimumHeight: 120,
-                maximumHeight: 240
-            )
-        )
-
-        XCTAssertEqual(result.height, 200)
-        XCTAssertEqual(result.bottomOffset, 40)
-        XCTAssertEqual(result.height + result.bottomOffset, 240)
-    }
-
-    func test_bottomHandleCanReturnOffsetToKeyHeight() throws {
-        let result = try XCTUnwrap(
-            OneHandedVerticalResizeResult.movingBottomHandle(
-                initialHeight: 200,
-                initialBottomOffset: 40,
-                translation: 25,
-                minimumHeight: 120,
-                maximumHeight: 240
-            )
-        )
-
-        XCTAssertEqual(result.height, 225)
-        XCTAssertEqual(result.bottomOffset, 15)
-        XCTAssertEqual(result.height + result.bottomOffset, 240)
-    }
-
-    func test_bottomHandleRejectsNegativeOffset() {
-        XCTAssertNil(
-            OneHandedVerticalResizeResult.movingBottomHandle(
-                initialHeight: 200,
-                initialBottomOffset: 40,
-                translation: 50,
-                minimumHeight: 120,
-                maximumHeight: 240
-            )
-        )
-    }
-
     func test_topHandleChangesHeightWithoutChangingBottomOffset() throws {
         let result = try XCTUnwrap(
             OneHandedVerticalResizeResult.movingTopHandle(

@@ -244,9 +244,8 @@ public final class VariableStates: ObservableObject {
             let height = keyboardInternalSettingManager.oneHandedModeSetting.heightItem(orientation: keyboardOrientation).height
             interfaceSize = CGSize(width: min(item.width, containerWidth), height: (height ?? baseHeight) * heightScaleFromKeyboardHeightSetting)
             interfacePosition = CGPoint(x: item.position.x, y: 0)
-            interfaceBottomOffset = keyboardInternalSettingManager.oneHandedModeSetting.bottomOffset(
-                orientation: keyboardOrientation
-            )
+            // TypeAI: キーボードの下に間は空けない（下のハンドルは廃止。以前に保存した値も使わない）
+            interfaceBottomOffset = 0
         }
 
         // 以下の処理は全ケースで共通
@@ -383,14 +382,19 @@ public final class VariableStates: ObservableObject {
         case .fullwidth:
             self.interfaceSize = CGSize(width: width, height: Design.fixedFullWidthInterfaceHeight ?? effectiveHeight)
             self.interfaceBottomOffset = 0
-        case .onehanded, .resizing:
+        case .onehanded:
             let item = keyboardInternalSettingManager.oneHandedModeSetting.item(orientation: orientation)
             // 安全のため、指示されたwidth, heightを超える値を許可しない。
             self.interfaceSize = CGSize(width: min(width, item.width), height: effectiveHeight)
             self.interfacePosition = ignoreStoredHeight ? .zero : CGPoint(x: item.position.x, y: 0)
-            self.interfaceBottomOffset = ignoreStoredHeight
-                ? 0
-                : keyboardInternalSettingManager.oneHandedModeSetting.bottomOffset(orientation: orientation)
+            // TypeAI: キーボードの下に間は空けない（下のハンドルは廃止。以前に保存した値も使わない）
+            self.interfaceBottomOffset = 0
+        case .resizing:
+            // TypeAI: 調整中の枠は作り直さない。ホストはいま表示している高さから枠を始めるが、
+            // 調整中にレイアウトが走ってここで保存値の高さに戻すと、枠が上にめり込んだり
+            // （保存値の方が高い）上が減ったり（低い）した（2026-11-23 ユーザー指摘）。幅だけ画面に収める
+            self.interfaceSize.width = min(width, self.interfaceSize.width)
+            self.interfaceBottomOffset = 0
         }
     }
 
