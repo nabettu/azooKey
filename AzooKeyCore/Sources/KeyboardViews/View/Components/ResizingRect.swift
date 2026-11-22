@@ -42,6 +42,12 @@ struct OneHandedVerticalResizeResult: Equatable {
         )
     }
 
+    /// 「上に広げる」の上限。縮めて確定してから再編集すると maximumHeight は縮めた高さになっているので、
+    /// 全幅のときの高さ（100%）と大きい方を取る
+    static func expandCeiling(maximumHeight: CGFloat, fullHeight: CGFloat) -> CGFloat {
+        max(maximumHeight, fullHeight)
+    }
+
     /// 「上に広げる」ボタンが効くか。本体の高さ（height + bottomOffset）が上限に届いていれば押しても変わらないので無効にする
     static func canExpandUp(height: CGFloat, bottomOffset: CGFloat, maximumHeight: CGFloat) -> Bool {
         height + bottomOffset < maximumHeight - 0.5
@@ -76,11 +82,26 @@ enum OneHandedHorizontalResize {
         containerWidth: CGFloat,
         minimumWidth: CGFloat
     ) -> CGFloat {
+        // 反対側の端も画面内にあるとは限らない（以前の実装で画面外に保存された位置）。先に画面内へ寄せて見る
         if isLeftEdge {
-            return min(max(proposed, 0), otherEdgeX - minimumWidth)
+            let other = min(max(otherEdgeX, minimumWidth), containerWidth)
+            return min(max(proposed, 0), other - minimumWidth)
         } else {
-            return max(min(proposed, containerWidth), otherEdgeX + minimumWidth)
+            let other = min(max(otherEdgeX, 0), containerWidth - minimumWidth)
+            return max(min(proposed, containerWidth), other + minimumWidth)
         }
+    }
+
+    /// 画面外にはみ出した枠を、幅を保ったまま画面内へ戻す（画面より広ければ画面幅に縮める）
+    static func normalizedEdges(
+        left: CGFloat,
+        right: CGFloat,
+        containerWidth: CGFloat,
+        minimumWidth: CGFloat
+    ) -> (left: CGFloat, right: CGFloat) {
+        let width = min(max(right - left, minimumWidth), containerWidth)
+        let newLeft = min(max(left, 0), containerWidth - width)
+        return (newLeft, newLeft + width)
     }
 }
 
@@ -265,6 +286,25 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
         Path(ResizingHandleHitArea.rect(for: edge, in: size, edgeRatio: edgeRatio))
     }
 
+    /// 以前の実装で画面外に保存された枠を、編集を始めたときに画面内へ戻す
+    private func normalizeHorizontalEdges() {
+        let normalized = OneHandedHorizontalResize.normalizedEdges(
+            left: top_left_edge.current.x,
+            right: bottom_right_edge.current.x,
+            containerWidth: initialSize.width,
+            minimumWidth: minimumWidth
+        )
+        guard normalized.left != top_left_edge.current.x || normalized.right != bottom_right_edge.current.x else {
+            return
+        }
+        top_left_edge.current.x = normalized.left
+        bottom_right_edge.current.x = normalized.right
+        size.width = normalized.right - normalized.left
+        position.x = (normalized.left + normalized.right - initialSize.width) / 2
+        setInitial()
+        updateUserDefaults()
+    }
+
     var body: some View {
         ZStack {
             Path {path in
@@ -355,16 +395,23 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                         }
                 }
                 // 上に広げる: 縮めたときだけ押せる。上限（100%）より上へは広がらないので、上限にいるときは無効
+                let expandCeiling = OneHandedVerticalResizeResult.expandCeiling(
+                    maximumHeight: variableStates.maximumHeight,
+                    fullHeight: Design.fixedFullWidthInterfaceHeight
+                        ?? Design.keyboardHeight(context: variableStates.layoutContext)
+                )
                 let canExpandUp = OneHandedVerticalResizeResult.canExpandUp(
                     height: size.height,
                     bottomOffset: bottomOffset,
-                    maximumHeight: variableStates.maximumHeight
+                    maximumHeight: expandCeiling
                 )
                 Button {
                     let result = OneHandedVerticalResizeResult.expandedUp(
                         bottomOffset: bottomOffset,
-                        maximumHeight: variableStates.maximumHeight
+                        maximumHeight: expandCeiling
                     )
+                    // 枠（= キーボードの高さ）も上限まで広げる。上ハンドルもここまで動かせるようになる
+                    variableStates.maximumHeight = expandCeiling
                     withAnimation(.interactiveSpring()) {
                         self.size.height = result.height
                         self.bottomOffset = result.bottomOffset
@@ -386,6 +433,7 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                 .disabled(!canExpandUp)
             }
         }
+        .onAppear(perform: normalizeHorizontalEdges)
     }
 }
 
