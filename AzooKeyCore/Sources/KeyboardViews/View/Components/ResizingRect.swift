@@ -352,18 +352,10 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                 // リセット: 全幅・100% の枠に戻す。サイズ調整モードは続ける（以前はモードごと抜けていた）
                 Button {
                     KeyboardFeedback<Extension>.reset()
-                    variableStates.heightScaleFromKeyboardHeightSetting = 1
-                    variableStates.maximumHeight = OneHandedVerticalResizeResult.expandCeiling(
-                        maximumHeight: variableStates.maximumHeight,
-                        fullHeight: fullHeight
-                    )
                     withAnimation(.interactiveSpring()) {
-                        self.size = CGSize(width: initialSize.width, height: fullHeight)
-                        self.position = .zero
-                        self.bottomOffset = 0
+                        variableStates.resetResizingFrame()
                     }
                     self.syncEdgesWithFrame()
-                    self.updateUserDefaults()
                 } label: {
                     Circle()
                         .fill(Color.red)
@@ -469,30 +461,10 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
         self.size.width.isApproximatelyEqual(to: self.initialSize.width, absoluteTolerance: 0.1)
     }
 
-    /// 左右寄せの反転: 幅はそのままに、空いている側（ボタンがある側）へキーボードを寄せる
-    private func flipAlignment(containerWidth: CGFloat) {
-        let newX = OneHandedHorizontalResize.positionXAlignedToWiderMargin(
-            positionX: position.x,
-            width: size.width,
-            containerWidth: containerWidth
-        )
-        withAnimation(.interactiveSpring()) {
-            position.x = newX
-        }
-        variableStates.keyboardInternalSettingManager.update(\.oneHandedModeSetting) {value in
-            value.set(
-                orientation: variableStates.keyboardOrientation,
-                size: size,
-                position: CGPoint(x: newX, y: 0),
-                bottomOffset: 0
-            )
-        }
-    }
-
     /// 片手モードで空いた側に出すボタン。左右寄せの反転だけを置く
     /// （以前の「サイズ調整モード」「全幅に戻す」は 2026-11-23 ユーザー指示で外した）
     @ViewBuilder
-    private func editButtons(availableWidth: CGFloat, availableHeight: CGFloat, containerWidth: CGFloat) -> some View {
+    private func editButtons(availableWidth: CGFloat, availableHeight: CGFloat) -> some View {
         let UIMaxButtonDiameter: CGFloat = 48.0
         // 縦方向と横方向、両方にはみ出さない直径(r)を計算
         let fittableRFromWidth = availableWidth - 8 // 左右の端から少し余白をとる
@@ -504,7 +476,9 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
             VStack {
                 Spacer()
                 Button {
-                    flipAlignment(containerWidth: containerWidth)
+                    withAnimation(.interactiveSpring()) {
+                        variableStates.flipOneHandedAlignment()
+                    }
                 } label: {
                     Circle().fill(Color.blue)
                         .overlay {
@@ -543,14 +517,14 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
                             if leftMargin >= rightMargin {
                                 // 左側に配置
                                 HStack {
-                                    editButtons(availableWidth: leftMargin, availableHeight: geo.size.height, containerWidth: initialSize.width)
+                                    editButtons(availableWidth: leftMargin, availableHeight: geo.size.height)
                                     Spacer()
                                 }
                             } else {
                                 // 右側に配置
                                 HStack {
                                     Spacer()
-                                    editButtons(availableWidth: rightMargin, availableHeight: geo.size.height, containerWidth: initialSize.width)
+                                    editButtons(availableWidth: rightMargin, availableHeight: geo.size.height)
                                 }
                             }
                         }

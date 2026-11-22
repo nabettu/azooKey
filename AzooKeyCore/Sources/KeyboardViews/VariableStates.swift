@@ -390,10 +390,19 @@ public final class VariableStates: ObservableObject {
             // TypeAI: キーボードの下に間は空けない（下のハンドルは廃止。以前に保存した値も使わない）
             self.interfaceBottomOffset = 0
         case .resizing:
-            // TypeAI: 調整中の枠は作り直さない。ホストはいま表示している高さから枠を始めるが、
-            // 調整中にレイアウトが走ってここで保存値の高さに戻すと、枠が上にめり込んだり
-            // （保存値の方が高い）上が減ったり（低い）した（2026-11-23 ユーザー指摘）。幅だけ画面に収める
-            self.interfaceSize.width = min(width, self.interfaceSize.width)
+            if ignoreStoredHeight {
+                // iPad のフローティング表示へ移ったときは従来どおり作り直す（保存値の高さ・位置は使えない）
+                self.interfaceSize = CGSize(width: min(width, self.interfaceSize.width), height: effectiveHeight)
+                self.interfacePosition = .zero
+            } else {
+                // TypeAI: 調整中の枠の高さは作り直さない。ホストはいま表示している高さから枠を始めるが、
+                // 調整中にレイアウトが走ってここで保存値の高さに戻すと、枠が上にめり込んだり
+                // （保存値の方が高い）上が減ったり（低い）した（2026-11-23 ユーザー指摘）。幅と位置は画面に収める
+                let newWidth = min(width, self.interfaceSize.width)
+                let slack = (width - newWidth) / 2
+                self.interfaceSize.width = newWidth
+                self.interfacePosition = CGPoint(x: min(max(self.interfacePosition.x, -slack), slack), y: 0)
+            }
             self.interfaceBottomOffset = 0
         }
     }
@@ -401,6 +410,41 @@ public final class VariableStates: ObservableObject {
     @available(*, deprecated, renamed: "setContainerWidth(_:orientation:)")
     @MainActor public func setInterfaceSize(orientation: KeyboardOrientation, screenWidth: CGFloat) {
         setContainerWidth(screenWidth, orientation: orientation)
+    }
+
+    /// TypeAI: 片手モードの左右寄せを反転する（幅はそのまま、空いている広い方の端へ寄せる）。
+    /// 保存するのは位置だけ（高さまで保存すると、高さの倍率を使うホストで倍率が二重にかかる）
+    @MainActor public func flipOneHandedAlignment() {
+        let newX = OneHandedHorizontalResize.positionXAlignedToWiderMargin(
+            positionX: interfacePosition.x,
+            width: interfaceSize.width,
+            containerWidth: containerWidth
+        )
+        interfacePosition = CGPoint(x: newX, y: 0)
+        let orientation = keyboardOrientation
+        keyboardInternalSettingManager.update(\.oneHandedModeSetting) { value in
+            value.update(orientation: orientation) { item in
+                item.position = CGPoint(x: newX, y: 0)
+            }
+        }
+    }
+
+    /// TypeAI: サイズ調整中のリセット。サイズ調整モードは続けたまま、全幅・100% の枠に戻して保存する
+    /// （以前の `resetOneHandedModeSetting` はモードごと抜けていた。2026-11-23 ユーザー指摘）
+    @MainActor public func resetResizingFrame() {
+        let fullHeight = OneHandedResizeFrame.fullHeight(context: layoutContext)
+        heightScaleFromKeyboardHeightSetting = 1
+        maximumHeight = max(maximumHeight, fullHeight)
+        interfaceSize = CGSize(width: containerWidth, height: fullHeight)
+        interfacePosition = .zero
+        interfaceBottomOffset = 0
+        let orientation = keyboardOrientation
+        let size = interfaceSize
+        keyboardInternalSettingManager.update(\.oneHandedModeSetting) { value in
+            value.set(orientation: orientation, size: size, position: .zero, bottomOffset: 0)
+            // 確定せずに閉じても、次に表示したとき古い高さの倍率をかけ直さない
+            value.setUserHasOverwrittenKeyboardHeightSetting(orientation: orientation)
+        }
     }
 
     @MainActor

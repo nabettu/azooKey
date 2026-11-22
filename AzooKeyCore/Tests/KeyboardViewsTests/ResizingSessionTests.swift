@@ -92,6 +92,94 @@ final class ResizingSessionTests: XCTestCase {
         XCTAssertEqual(OneHandedHorizontalResize.positionXAlignedToWiderMargin(positionX: 50, width: 400, containerWidth: 1000), -300)
     }
 
+    /// 反転で保存するのは位置だけ。高さまで保存すると、高さの倍率を使うホストで次の表示に倍率が二重にかかる
+    func test_flipSavesOnlyPosition() throws {
+        let states = try makeStates()
+        states.setContainerWidth(801, orientation: .horizontal)
+        states.keyboardInternalSettingManager.update(\.oneHandedModeSetting) { value in
+            value.set(orientation: .horizontal, size: CGSize(width: 401, height: 200), position: CGPoint(x: 200, y: 0), bottomOffset: 0)
+        }
+        states.heightScaleFromKeyboardHeightSetting = 1.2
+        states.interfaceSize = CGSize(width: 401, height: 240)
+        states.interfacePosition = CGPoint(x: 200, y: 0)
+
+        states.flipOneHandedAlignment()
+
+        XCTAssertEqual(states.interfacePosition.x, -200)
+        let setting = states.keyboardInternalSettingManager.oneHandedModeSetting
+        XCTAssertEqual(setting.item(orientation: .horizontal).position.x, -200)
+        XCTAssertEqual(setting.item(orientation: .horizontal).width, 401)
+        XCTAssertEqual(setting.heightItem(orientation: .horizontal).height, 200)
+    }
+
+    // MARK: - リセット
+
+    /// リセットしてもサイズ調整モードは続き、枠は全幅・100%（Duo ではホストの固定値）に戻る
+    func test_resetKeepsResizingModeAndUsesFixedFullHeight() throws {
+        Design.fixedFullWidthInterfaceHeight = 209
+        defer { Design.fixedFullWidthInterfaceHeight = nil }
+        let states = try makeStates()
+        states.setContainerWidth(801, orientation: .horizontal)
+        states.setResizingMode(.resizing)
+        states.interfaceSize = CGSize(width: 400, height: 150)
+        states.interfacePosition = CGPoint(x: 100, y: 0)
+        states.maximumHeight = 150
+
+        states.resetResizingFrame()
+
+        XCTAssertEqual(states.resizingState, .resizing)
+        XCTAssertEqual(states.interfaceSize, CGSize(width: 801, height: 209))
+        XCTAssertEqual(states.interfacePosition, .zero)
+        XCTAssertEqual(states.maximumHeight, 209)
+        let setting = states.keyboardInternalSettingManager.oneHandedModeSetting
+        XCTAssertTrue(setting.heightItem(orientation: .horizontal).userHasOverwrittenKeyboardHeightSetting)
+        XCTAssertEqual(setting.heightItem(orientation: .horizontal).height, 209)
+        // リセット直後に確定すると全幅に戻る
+        XCTAssertTrue(OneHandedResizeFrame.isFull(
+            size: states.interfaceSize,
+            positionX: states.interfacePosition.x,
+            containerWidth: states.containerWidth,
+            fullHeight: OneHandedResizeFrame.fullHeight(context: states.layoutContext)
+        ))
+    }
+
+    // MARK: - 調整中に画面幅が変わったとき
+
+    func test_widthChangeDuringResizingKeepsFrameOnScreen() throws {
+        let states = try makeStates()
+        states.setContainerWidth(801, orientation: .horizontal)
+        states.setResizingMode(.resizing)
+        states.interfaceSize = CGSize(width: 500, height: 209)
+        states.interfacePosition = CGPoint(x: 150, y: 0)
+
+        states.setContainerWidth(600, orientation: .horizontal)
+
+        XCTAssertEqual(states.interfaceSize, CGSize(width: 500, height: 209))
+        XCTAssertEqual(states.interfacePosition.x, 50)
+    }
+
+    /// iPad のフローティング表示（幅 400 未満）へ移ったら、従来どおり保存値を使わず作り直す
+    func test_padFloatingDuringResizingResetsPosition() throws {
+        let states = VariableStates(
+            interfaceWidth: 801,
+            orientation: .vertical,
+            clipboardHistoryManagerConfig: ClipboardConfig(),
+            tabManagerConfig: TabConfig(),
+            userDefaults: try XCTUnwrap(UserDefaults(suiteName: suiteName)),
+            layoutIdiom: .pad
+        )
+        states.setContainerWidth(801, orientation: .vertical)
+        states.setResizingMode(.resizing)
+        states.interfaceSize = CGSize(width: 500, height: 400)
+        states.interfacePosition = CGPoint(x: 150, y: 0)
+
+        states.setContainerWidth(320, orientation: .vertical)
+
+        XCTAssertEqual(states.interfacePosition, .zero)
+        XCTAssertEqual(states.interfaceSize.width, 320)
+        XCTAssertEqual(states.interfaceSize.height, Design.keyboardHeight(context: states.layoutContext))
+    }
+
     // MARK: - 確定したときに全幅へ戻すか
 
     /// 全幅の高さはホストの固定値（Duo）のことがあり、`initialSize.height`（幅由来）と一致しない。
