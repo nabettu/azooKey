@@ -42,13 +42,14 @@ struct OneHandedVerticalResizeResult: Equatable {
         )
     }
 
-    /// 「上に広げる」ボタンで maximumHeight を 64pt ずつ広げる。上限は既定の高さの 2 倍。
-    ///
-    /// maximumHeight は本体の高さ（interfaceSize.height + bottomOffset）なので、
-    /// キーボード下の余白（`Design.keyboardScreenBottomPadding`）は上限に足さない。
-    /// すでに上限より高いとき（以前は上限に余白を足していたので、その差まで広げた高さが保存されている）は縮めない
-    static func expandedMaximumHeight(current: CGFloat, context: KeyboardLayoutContext) -> CGFloat {
-        max(current, min(current + 64, Design.keyboardHeight(context: context) * 2))
+    /// 「上に広げる」ボタンが効くか。本体の高さ（height + bottomOffset）が上限に届いていれば押しても変わらないので無効にする
+    static func canExpandUp(height: CGFloat, bottomOffset: CGFloat, maximumHeight: CGFloat) -> Bool {
+        height + bottomOffset < maximumHeight - 0.5
+    }
+
+    /// 「上に広げる」: 下の余白はそのままに、上端を上限まで戻す
+    static func expandedUp(bottomOffset: CGFloat, maximumHeight: CGFloat) -> Self {
+        Self(height: maximumHeight - bottomOffset, bottomOffset: bottomOffset)
     }
 
     private static func validated(
@@ -63,6 +64,23 @@ struct OneHandedVerticalResizeResult: Equatable {
             return nil
         }
         return Self(height: height, bottomOffset: bottomOffset)
+    }
+}
+
+/// サイズ調整の左右のハンドル。端は画面（0...containerWidth）の外へ出さず、幅は minimumWidth 以上に保つ
+enum OneHandedHorizontalResize {
+    static func clampedEdgeX(
+        proposed: CGFloat,
+        otherEdgeX: CGFloat,
+        isLeftEdge: Bool,
+        containerWidth: CGFloat,
+        minimumWidth: CGFloat
+    ) -> CGFloat {
+        if isLeftEdge {
+            return min(max(proposed, 0), otherEdgeX - minimumWidth)
+        } else {
+            return max(min(proposed, containerWidth), otherEdgeX + minimumWidth)
+        }
     }
 }
 
@@ -170,20 +188,30 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
         self.bottom_right_edge.initial = self.bottom_right_edge.current
     }
 
-    func xGesture(target: KeyPath<Self, Binding<Position>>) -> some Gesture {
+    func xGesture(isLeftEdge: Bool) -> some Gesture {
         DragGesture(minimumDistance: .zero, coordinateSpace: .global)
             .onChanged {value in
                 let dx = value.location.x - value.startLocation.x
-                let before = self[keyPath: target].wrappedValue.current.x
-                self[keyPath: target].wrappedValue.current.x = self[keyPath: target].wrappedValue.initial.x + dx
-                let width = abs(bottom_right_edge.current.x - top_left_edge.current.x)
-                let px = (top_left_edge.current.x + bottom_right_edge.current.x - initialSize.width) / 2
-                if width < minimumWidth || px < -initialSize.width / 2 || px > initialSize.width / 2 {
-                    self[keyPath: target].wrappedValue.current.x = before
+                // 画面の外へは引っ張れない（以前は中心が画面端に来るまで動かせ、半分はみ出せた）
+                if isLeftEdge {
+                    self.top_left_edge.current.x = OneHandedHorizontalResize.clampedEdgeX(
+                        proposed: self.top_left_edge.initial.x + dx,
+                        otherEdgeX: self.bottom_right_edge.current.x,
+                        isLeftEdge: true,
+                        containerWidth: initialSize.width,
+                        minimumWidth: minimumWidth
+                    )
                 } else {
-                    self.size.width = width
-                    self.position.x = px
+                    self.bottom_right_edge.current.x = OneHandedHorizontalResize.clampedEdgeX(
+                        proposed: self.bottom_right_edge.initial.x + dx,
+                        otherEdgeX: self.top_left_edge.current.x,
+                        isLeftEdge: false,
+                        containerWidth: initialSize.width,
+                        minimumWidth: minimumWidth
+                    )
                 }
+                self.size.width = bottom_right_edge.current.x - top_left_edge.current.x
+                self.position.x = (top_left_edge.current.x + bottom_right_edge.current.x - initialSize.width) / 2
             }
             .onEnded {_ in
                 self.correctOrder()
@@ -249,7 +277,7 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
             }
             .stroke(Color.white, lineWidth: 3)
             .contentShape(handleHitArea(.left))
-            .gesture(xGesture(target: \.$top_left_edge))
+            .gesture(xGesture(isLeftEdge: true))
             Path {path in
                 for i in 0..<4 {
                     let y = size.height / 24 * CGFloat(i)
@@ -271,7 +299,7 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
             }
             .stroke(Color.white, lineWidth: 3)
             .contentShape(handleHitArea(.right))
-            .gesture(xGesture(target: \.$bottom_right_edge))
+            .gesture(xGesture(isLeftEdge: false))
             Path {path in
                 for i in 0..<4 {
                     let y = size.height - size.height / 24 * CGFloat(i)
@@ -326,25 +354,36 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                                 .font(Font.system(size: r * 0.5))
                         }
                 }
+                // 上に広げる: 縮めたときだけ押せる。上限（100%）より上へは広がらないので、上限にいるときは無効
+                let canExpandUp = OneHandedVerticalResizeResult.canExpandUp(
+                    height: size.height,
+                    bottomOffset: bottomOffset,
+                    maximumHeight: variableStates.maximumHeight
+                )
                 Button {
-                    variableStates.maximumHeight = OneHandedVerticalResizeResult.expandedMaximumHeight(
-                        current: variableStates.maximumHeight,
-                        context: KeyboardLayoutContext(
-                            containerWidth: variableStates.containerWidth,
-                            orientation: variableStates.keyboardOrientation,
-                            idiom: variableStates.layoutIdiom
-                        )
+                    let result = OneHandedVerticalResizeResult.expandedUp(
+                        bottomOffset: bottomOffset,
+                        maximumHeight: variableStates.maximumHeight
                     )
+                    withAnimation(.interactiveSpring()) {
+                        self.size.height = result.height
+                        self.bottomOffset = result.bottomOffset
+                        self.position.y = 0
+                    }
+                    self.setInitial()
+                    self.updateUserDefaults()
                 } label: {
                     Circle()
-                        .fill(Color.blue)
+                        .fill(canExpandUp ? Color.blue : Color.gray)
                         .frame(width: r, height: r)
                         .overlay {
                             Image(systemName: "arrow.up.to.line.compact")
                                 .foregroundStyle(.white)
                                 .font(.system(size: r * 0.5))
                         }
+                        .opacity(canExpandUp ? 1 : 0.5)
                 }
+                .disabled(!canExpandUp)
             }
         }
     }
