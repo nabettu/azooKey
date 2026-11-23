@@ -436,6 +436,8 @@ public final class VariableStates: ObservableObject {
         let newWidth = min(max(width, 0), containerWidth)
         let slack = (containerWidth - newWidth) / 2
         let newX = min(max(positionX, -slack), slack)
+        // 保存した高さに倍率をかけ直さないよう、実行中の倍率も戻す（`resetResizingFrame` と同じ。ai-review の指摘）
+        heightScaleFromKeyboardHeightSetting = 1
         interfaceSize = CGSize(width: newWidth, height: height)
         interfacePosition = CGPoint(x: newX, y: 0)
         interfaceBottomOffset = 0
@@ -443,7 +445,7 @@ public final class VariableStates: ObservableObject {
         let size = interfaceSize
         keyboardInternalSettingManager.update(\.oneHandedModeSetting) { value in
             value.set(orientation: orientation, size: size, position: CGPoint(x: newX, y: 0), bottomOffset: 0)
-            // 高さの倍率を使うホストで、保存した高さに倍率をかけ直さない
+            // 次に表示したときも、保存した高さに古い倍率をかけ直さない
             value.setUserHasOverwrittenKeyboardHeightSetting(orientation: orientation)
         }
         setResizingMode(.onehanded)

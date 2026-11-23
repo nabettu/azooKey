@@ -140,6 +140,18 @@ final class ResizingSessionTests: XCTestCase {
         XCTAssertEqual(states.interfacePosition.x, 67)
     }
 
+    /// 高さの倍率を使うホストでも、渡した高さのまま保つ（次のレイアウトで倍率をかけ直さない）
+    func test_startOneHandedModeDoesNotReapplyHeightScale() throws {
+        let states = try makeStates()
+        states.setContainerWidth(669, orientation: .vertical)
+        states.heightScaleFromKeyboardHeightSetting = 1.2
+
+        states.startOneHandedMode(width: 535, height: 277, positionX: 67)
+        states.setContainerWidth(669, orientation: .vertical)
+
+        XCTAssertEqual(states.interfaceSize.height, 277)
+    }
+
     /// 画面より広い幅を渡されても画面に収め、位置も空きの範囲に収める
     func test_startOneHandedModeClampsToContainer() throws {
         let states = try makeStates()
