@@ -112,6 +112,45 @@ final class ResizingSessionTests: XCTestCase {
         XCTAssertEqual(setting.heightItem(orientation: .horizontal).height, 200)
     }
 
+    // MARK: - ホストが決める片手モードの既定
+
+    /// 縦に長く横に広い画面（Duo の内側の縦持ち・iPad mini の縦）で、ホストが幅・高さ・寄せを決めて片手モードで始める。
+    /// 保存もするので、次のレイアウト（setContainerWidth）や向きの往復でも同じ枠に戻る
+    func test_startOneHandedModeKeepsFrameAcrossLayout() throws {
+        let states = try makeStates()
+        states.setContainerWidth(669, orientation: .vertical)
+
+        states.startOneHandedMode(width: 535, height: 277, positionX: 67)
+
+        XCTAssertEqual(states.resizingState, .onehanded)
+        XCTAssertEqual(states.interfaceSize, CGSize(width: 535, height: 277))
+        XCTAssertEqual(states.interfacePosition.x, 67)
+        XCTAssertEqual(states.maximumHeight, 277)
+
+        states.setContainerWidth(669, orientation: .vertical)
+        XCTAssertEqual(states.resizingState, .onehanded)
+        XCTAssertEqual(states.interfaceSize, CGSize(width: 535, height: 277))
+        XCTAssertEqual(states.interfacePosition.x, 67)
+
+        // 横にして戻しても片手モードのまま同じ枠
+        states.setContainerWidth(951, orientation: .horizontal)
+        states.setContainerWidth(669, orientation: .vertical)
+        XCTAssertEqual(states.resizingState, .onehanded)
+        XCTAssertEqual(states.interfaceSize, CGSize(width: 535, height: 277))
+        XCTAssertEqual(states.interfacePosition.x, 67)
+    }
+
+    /// 画面より広い幅を渡されても画面に収め、位置も空きの範囲に収める
+    func test_startOneHandedModeClampsToContainer() throws {
+        let states = try makeStates()
+        states.setContainerWidth(669, orientation: .vertical)
+
+        states.startOneHandedMode(width: 900, height: 277, positionX: 300)
+
+        XCTAssertEqual(states.interfaceSize.width, 669)
+        XCTAssertEqual(states.interfacePosition.x, 0)
+    }
+
     // MARK: - リセット
 
     /// リセットしてもサイズ調整モードは続き、枠は全幅・100%（Duo ではホストの固定値）に戻る

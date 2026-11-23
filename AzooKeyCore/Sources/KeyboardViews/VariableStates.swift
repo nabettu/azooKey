@@ -429,6 +429,26 @@ public final class VariableStates: ObservableObject {
         }
     }
 
+    /// TypeAI: ホストが決めた枠（幅・高さ・中央からのずれ）で片手モードを始め、その枠を保存する。
+    /// 縦に長く横に広い画面（iPhone Duo の内側の縦持ち・iPad mini の縦）で、全幅だと大きすぎるときの既定に使う。
+    /// 幅は画面に、位置は空きの範囲に収める
+    @MainActor public func startOneHandedMode(width: CGFloat, height: CGFloat, positionX: CGFloat) {
+        let newWidth = min(max(width, 0), containerWidth)
+        let slack = (containerWidth - newWidth) / 2
+        let newX = min(max(positionX, -slack), slack)
+        interfaceSize = CGSize(width: newWidth, height: height)
+        interfacePosition = CGPoint(x: newX, y: 0)
+        interfaceBottomOffset = 0
+        let orientation = keyboardOrientation
+        let size = interfaceSize
+        keyboardInternalSettingManager.update(\.oneHandedModeSetting) { value in
+            value.set(orientation: orientation, size: size, position: CGPoint(x: newX, y: 0), bottomOffset: 0)
+            // 高さの倍率を使うホストで、保存した高さに倍率をかけ直さない
+            value.setUserHasOverwrittenKeyboardHeightSetting(orientation: orientation)
+        }
+        setResizingMode(.onehanded)
+    }
+
     /// TypeAI: サイズ調整中のリセット。サイズ調整モードは続けたまま、全幅・100% の枠に戻して保存する
     /// （以前の `resetOneHandedModeSetting` はモードごと抜けていた。2026-11-23 ユーザー指摘）
     @MainActor public func resetResizingFrame() {
