@@ -116,31 +116,42 @@ enum OneHandedResizeFrame {
 /// サイズ調整のハンドルのタップ領域。
 ///
 /// ハンドルは太さ 3pt の線で描いているので、線そのものを当たり判定にすると指で掴みにくい。
-/// 線を描いている帯に余白を足し、厚みを最低 `minimumThickness` にする。
+/// - 上のつまみ: 枠の幅いっぱいで、上辺の外側（`outset`）から厚み `minimumThickness` 以上まで掴める
+///   （以前は線の長さ＋余白しか無く、狭すぎた。2026-11-25 ユーザー指摘）
+/// - 左右のつまみ: 外側（`outset`）から厚み `minimumThickness` 以上まで、上のつまみの下から枠の下端まで掴める
+/// 下のつまみは置いていない（キーボードの下に間を空けることは無い）
 enum ResizingHandleHitArea {
     enum Edge: CaseIterable {
-        case left, right, top, bottom
+        case left, right, top
     }
 
     /// タップ領域の最小の厚み（Human Interface Guidelines の最小タップ領域）
     static let minimumThickness: CGFloat = 44
-    /// 線の帯の外側に足す余白
+    /// 線の帯の内側に足す余白
     static let padding: CGFloat = 12
+    /// 枠の外側に広げる幅。辺のすぐ外を触っても掴める
+    static let outset: CGFloat = 20
 
-    /// `size` はリサイズ枠の大きさ、`edgeRatio` はハンドルの線の長さの比率（`ResizingRect` と同じ値）
+    /// `size` はリサイズ枠の大きさ、`edgeRatio` はハンドルの線の長さの比率（`ResizingRect` と同じ値。いまは使っていない）
     static func rect(for edge: Edge, in size: CGSize, edgeRatio: CGFloat) -> CGRect {
+        let topThickness = max(size.height / 8 + padding, minimumThickness)
         switch edge {
+        case .top:
+            return CGRect(
+                x: -outset,
+                y: -outset,
+                width: size.width + outset * 2,
+                height: topThickness + outset
+            )
         case .left, .right:
-            // 線は端から幅の 1/8 までに 4 本、縦方向は中央 ±(高さ × edgeRatio × 0.8)
             let thickness = max(size.width / 8 + padding, minimumThickness)
-            let halfLength = size.height * edgeRatio * 0.8 + padding
-            let x = edge == .left ? 0 : size.width - thickness
-            return CGRect(x: x, y: size.height / 2 - halfLength, width: thickness, height: halfLength * 2)
-        case .top, .bottom:
-            let thickness = max(size.height / 8 + padding, minimumThickness)
-            let halfLength = size.width * edgeRatio * 0.8 + padding
-            let y = edge == .top ? 0 : size.height - thickness
-            return CGRect(x: size.width / 2 - halfLength, y: y, width: halfLength * 2, height: thickness)
+            let x = edge == .left ? -outset : size.width - thickness
+            return CGRect(
+                x: x,
+                y: topThickness,
+                width: thickness + outset,
+                height: max(size.height - topThickness, 0)
+            )
         }
     }
 }

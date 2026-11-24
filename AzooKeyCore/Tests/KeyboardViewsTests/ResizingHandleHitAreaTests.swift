@@ -16,7 +16,6 @@ final class ResizingHandleHitAreaTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(rect(.left, size: small).width, ResizingHandleHitArea.minimumThickness)
         XCTAssertGreaterThanOrEqual(rect(.right, size: small).width, ResizingHandleHitArea.minimumThickness)
         XCTAssertGreaterThanOrEqual(rect(.top, size: small).height, ResizingHandleHitArea.minimumThickness)
-        XCTAssertGreaterThanOrEqual(rect(.bottom, size: small).height, ResizingHandleHitArea.minimumThickness)
     }
 
     func test_hitAreaCoversDrawnLines() {
@@ -34,22 +33,32 @@ final class ResizingHandleHitAreaTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(top.maxX, size.width / 2 + size.width * edgeRatio * 0.8)
     }
 
-    func test_hitAreasStayInsideAndMirror() {
-        let bounds = CGRect(origin: .zero, size: size)
-        for edge in ResizingHandleHitArea.Edge.allCases {
-            XCTAssertTrue(bounds.contains(rect(edge)), "\(edge)")
-        }
-        XCTAssertEqual(rect(.right).maxX, size.width)
-        XCTAssertEqual(rect(.right).width, rect(.left).width)
-        XCTAssertEqual(rect(.bottom).maxY, size.height)
-        XCTAssertEqual(rect(.bottom).height, rect(.top).height)
+    /// 上のつまみは線の下だけでなく、枠の上辺の外側と、幅いっぱいで掴める（2026-11-25 ユーザー指摘「触れる領域が狭すぎる」）
+    func test_topHandleSpansFullWidthAndReachesAboveTheEdge() {
+        let top = rect(.top)
+        XCTAssertLessThanOrEqual(top.minX, 0)
+        XCTAssertGreaterThanOrEqual(top.maxX, size.width)
+        XCTAssertLessThanOrEqual(top.minY, -ResizingHandleHitArea.outset)
     }
 
-    func test_horizontalAndVerticalHandlesDoNotOverlap() {
-        // 角で左右のハンドルと上下のハンドルが重なると、どちらのドラッグになるかが曖昧になる
-        for side in [ResizingHandleHitArea.Edge.left, .right] {
-            for vertical in [ResizingHandleHitArea.Edge.top, .bottom] {
-                XCTAssertFalse(rect(side).intersects(rect(vertical)), "\(side) / \(vertical)")
+    /// 左右のつまみも枠の外側から掴め、上のつまみの下から枠の下端まで届く
+    func test_sideHandlesReachOutsideAndSpanBelowTopHandle() {
+        let left = rect(.left)
+        let right = rect(.right)
+        let top = rect(.top)
+        XCTAssertLessThanOrEqual(left.minX, -ResizingHandleHitArea.outset)
+        XCTAssertGreaterThanOrEqual(right.maxX, size.width + ResizingHandleHitArea.outset)
+        XCTAssertEqual(left.minY, top.maxY, accuracy: 0.001)
+        XCTAssertEqual(left.maxY, size.height, accuracy: 0.001)
+        XCTAssertEqual(right.width, left.width, accuracy: 0.001)
+        XCTAssertEqual(right.minY, left.minY, accuracy: 0.001)
+    }
+
+    func test_sideAndTopHandlesDoNotOverlap() {
+        // 角で左右のハンドルと上のハンドルが重なると、どちらのドラッグになるかが曖昧になる
+        for small in [size, CGSize(width: 120, height: 120)] {
+            for side in [ResizingHandleHitArea.Edge.left, .right] {
+                XCTAssertFalse(rect(side, size: small).intersects(rect(.top, size: small)), "\(side) \(small)")
             }
         }
     }
