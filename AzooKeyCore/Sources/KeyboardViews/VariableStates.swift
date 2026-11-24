@@ -352,6 +352,26 @@ public final class VariableStates: ObservableObject {
         }
     }
 
+    /// TypeAI: このプロセスで最後に知らされた画面（`setOneHandedModeProfile`）
+    private var oneHandedModeProfile: String?
+
+    /// TypeAI: サイズ調整の保存値をどの画面のものとして使うかを知らせる。表示のたびに `setContainerWidth` より前に呼ぶ。
+    ///
+    /// - 画面が変わったら（iPhone Duo を開いた・閉じた）その画面の保存値に入れ替え、前回のモード（全幅 / 片手）に戻す
+    /// - プロセスで最初の呼び出しでも前回のモードに戻す。`resizingState` の初期値は全幅で、向きが変わらない限り
+    ///   `updateResizingState` が呼ばれないため、縮めて確定した枠が時間をおいて開くと全幅に戻っていた（2026-11-25 ユーザー指摘）
+    @MainActor public func setOneHandedModeProfile(_ id: String) {
+        guard oneHandedModeProfile != id else {
+            return
+        }
+        let isFirst = oneHandedModeProfile == nil
+        oneHandedModeProfile = id
+        let switched = keyboardInternalSettingManager.switchOneHandedModeProfile(to: id)
+        if switched || isFirst {
+            updateResizingState()
+        }
+    }
+
     @MainActor public func setInputStyle(_ style: InputStyle) {
         self.inputStyle = style
     }
