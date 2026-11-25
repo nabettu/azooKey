@@ -40,11 +40,17 @@ extension KeyLabelType {
         max(0, (totalWidth - gap) / 2)
     }
 
-    /// 地球儀と絵文字を半分ずつ並べるときのアイコンの縮小率。左右に 4pt ずつ余白を残して収める（1 より大きくはしない）
+    /// 地球儀と絵文字を半分ずつ並べるときのアイコンの縮小率。左右に 4pt ずつ余白を残して収める（1 より大きくはしない）。
+    /// ただし `minimumSplitIconSize` を下回るなら先に余白を削る（英語専用 QWERTY の 1.4 列を割ると狭く、
+    /// 余白を守ると Duo の内側の片手モードで 7pt になり判別できなかった。ai-review の P2）。
+    /// それでも入らないときだけ半分の幅いっぱいまで縮める
     static func splitIconScale(halfWidth: CGFloat, iconSize: CGFloat) -> CGFloat {
         guard iconSize > 0 else { return 1 }
-        return max(0, min(1, (halfWidth - 8) / iconSize))
+        let size = max(halfWidth - 8, min(minimumSplitIconSize, halfWidth))
+        return max(0, min(1, size / iconSize))
     }
+
+    static let minimumSplitIconSize: CGFloat = 12
 }
 
 public struct DirectionalKeyLabel: View {

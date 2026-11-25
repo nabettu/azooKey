@@ -39,9 +39,17 @@ final class ChangeKeyboardKeyContentTests: XCTestCase {
     func test_splitIconScale_shrinksOnlyWhenHalfIsNarrow() {
         // Duo のカバー（キー幅約 69pt → 半分 34.5pt）で 21pt のアイコンは縮めない
         XCTAssertEqual(KeyLabelType.splitIconScale(halfWidth: 34.5, iconSize: 21), 1)
-        // 片手モードの最小幅 120pt の 5 列（キー幅約 22pt → 半分 11pt）では収まるまで縮める
-        XCTAssertEqual(KeyLabelType.splitIconScale(halfWidth: 11, iconSize: 21), 3.0 / 21, accuracy: 0.0001)
-        XCTAssertEqual(KeyLabelType.splitIconScale(halfWidth: 4, iconSize: 21), 0)
+        // 余白 4pt ずつを残せるうちは残して縮める
+        XCTAssertEqual(KeyLabelType.splitIconScale(halfWidth: 24, iconSize: 21), 16.0 / 21, accuracy: 0.0001)
+    }
+
+    /// 英語専用 QWERTY は 1.4 列のキーを半分に割るので、フリック（1 列 = 1/5）より狭くなる。
+    /// 余白を守って縮め続けると Duo の内側の片手モード（半分約 15pt）で 7pt になり判別できない（ai-review の P2）。
+    /// 12pt を下回る前に余白の方を削り、それでも入らないときだけ半分の幅いっぱいまで縮める
+    func test_splitIconScale_keepsLegibleSizeByDroppingMarginFirst() {
+        XCTAssertEqual(KeyLabelType.splitIconScale(halfWidth: 15, iconSize: 21), 12.0 / 21, accuracy: 0.0001)
+        XCTAssertEqual(KeyLabelType.splitIconScale(halfWidth: 11, iconSize: 21), 11.0 / 21, accuracy: 0.0001)
+        XCTAssertEqual(KeyLabelType.splitIconScale(halfWidth: 0, iconSize: 21), 0)
     }
 
     func test_onlyGlobeAndEmojiSplitsBackground() {
