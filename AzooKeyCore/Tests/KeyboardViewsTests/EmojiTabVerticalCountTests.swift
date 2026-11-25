@@ -45,4 +45,17 @@ final class EmojiTabVerticalCountTests: XCTestCase {
         XCTAssertEqual(emojiTabHeightRatio(interfaceHeight: 300, fullHeight: 250), 1)
         XCTAssertEqual(emojiTabHeightRatio(interfaceHeight: 200, fullHeight: 0), 1)
     }
+
+    /// 縮めても絵文字は 100% のときより大きくしない。行数は切り上げる（四捨五入だと 66% で 3 行になり、1 行が 1.1 倍になった。2026-11-25 ユーザー指摘）
+    func test_shrunkRowsNeverMakeEmojiLarger() {
+        for ratio in stride(from: CGFloat(0.4), through: 1, by: 0.01) {
+            for orientation in [KeyboardOrientation.vertical, .horizontal] {
+                let base = emojiTabVerticalCount(isEmbedded: false, orientation: orientation, override: nil)
+                let rows = emojiTabVerticalCount(isEmbedded: false, orientation: orientation, override: nil, heightRatio: ratio)
+                guard rows > 2 else { continue }  // 下限の 2 行では大きくなりうる
+                XCTAssertLessThanOrEqual(ratio / CGFloat(rows), 1 / CGFloat(base) + 0.0001, "ratio=\(ratio) rows=\(rows)")
+            }
+        }
+        XCTAssertEqual(emojiTabVerticalCount(isEmbedded: false, orientation: .vertical, override: nil, heightRatio: 0.66), 4)
+    }
 }
