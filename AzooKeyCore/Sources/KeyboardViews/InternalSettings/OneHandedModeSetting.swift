@@ -18,6 +18,9 @@ public struct OneHandedModeSetting: Sendable, Codable, StaticInitialValueAvailab
     private(set) var horizontal = OneHandedModeSettingItem()
     private(set) var verticalHeight = OneHandedModeHeightSettingItem()
     private(set) var horizontalHeight = OneHandedModeHeightSettingItem()
+    /// TypeAI: この保存値がどの画面のものか（`KeyboardInternalSettingManager.switchOneHandedModeProfile`）。
+    /// 値と同じ保存単位に入れて、画面の識別子と値が食い違わないようにする。nil は画面を記録していない以前の版の値
+    var profile: String?
 
     private func keyPath(orientation: KeyboardOrientation) -> WritableKeyPath<Self, OneHandedModeSettingItem> {
         switch orientation {
@@ -116,6 +119,7 @@ extension OneHandedModeSetting {
         case horizontal
         case verticalHeight
         case horizontalHeight
+        case profile
         // legacy keys (<= v2.5)
         case flick_vertical
         case flick_horizontal
@@ -132,6 +136,7 @@ extension OneHandedModeSetting {
             self.horizontal = try container.decodeIfPresent(OneHandedModeSettingItem.self, forKey: .horizontal) ?? .init()
             self.verticalHeight = try container.decodeIfPresent(OneHandedModeHeightSettingItem.self, forKey: .verticalHeight) ?? .init()
             self.horizontalHeight = try container.decodeIfPresent(OneHandedModeHeightSettingItem.self, forKey: .horizontalHeight) ?? .init()
+            self.profile = try container.decodeIfPresent(String.self, forKey: .profile)
             return
         }
 
@@ -155,6 +160,7 @@ extension OneHandedModeSetting {
         try container.encode(self.horizontal, forKey: .horizontal)
         try container.encode(self.verticalHeight, forKey: .verticalHeight)
         try container.encode(self.horizontalHeight, forKey: .horizontalHeight)
+        try container.encodeIfPresent(self.profile, forKey: .profile)
     }
 }
 

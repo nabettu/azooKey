@@ -132,9 +132,12 @@ enum ResizingHandleHitArea {
     /// 枠の外側に広げる幅。辺のすぐ外を触っても掴める
     static let outset: CGFloat = 20
 
-    /// `size` はリサイズ枠の大きさ、`edgeRatio` はハンドルの線の長さの比率（`ResizingRect` と同じ値。いまは使っていない）
+    /// `size` はリサイズ枠の大きさ、`edgeRatio` はハンドルの線の長さの比率（`ResizingRect` と同じ値）
     static func rect(for edge: Edge, in size: CGSize, edgeRatio: CGFloat) -> CGRect {
-        let topThickness = max(size.height / 8 + padding, minimumThickness)
+        // 上のつまみの下端。左右の線（中央 ±高さ × edgeRatio × 0.8）にはかからないようにする。
+        // 小さく縮めた枠で左右の線の上の方を掴むと、幅ではなく高さが変わってしまう（ai-review の指摘）
+        let sideLineTop = size.height / 2 - size.height * edgeRatio * 0.8
+        let topThickness = min(max(size.height / 8 + padding, minimumThickness), sideLineTop)
         switch edge {
         case .top:
             return CGRect(

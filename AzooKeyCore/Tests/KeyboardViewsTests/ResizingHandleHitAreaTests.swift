@@ -62,4 +62,13 @@ final class ResizingHandleHitAreaTests: XCTestCase {
             }
         }
     }
+
+    /// 小さく縮めた枠でも、左右の線の全体が左右のつまみに入る（上のつまみに取られない）
+    func test_sideLinesBelongToSideHandlesOnSmallFrames() {
+        for small in [CGSize(width: 120, height: 120), CGSize(width: 300, height: 100)] {
+            let lineTop = small.height / 2 - small.height * edgeRatio * 0.8
+            XCTAssertLessThanOrEqual(rect(.left, size: small).minY, lineTop, "\(small)")
+            XCTAssertLessThanOrEqual(rect(.right, size: small).minY, lineTop, "\(small)")
+        }
+    }
 }

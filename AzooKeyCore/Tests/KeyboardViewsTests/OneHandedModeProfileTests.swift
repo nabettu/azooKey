@@ -151,4 +151,32 @@ final class OneHandedModeProfileTests: XCTestCase {
         XCTAssertEqual(upgraded.resizingState, .fullwidth)
         XCTAssertEqual(upgraded.interfaceSize.width, 466, accuracy: 0.001)
     }
+
+    /// 向きが変わらないまま画面だけが変わる（縦のまま開閉する）ときも、その画面のモードに戻る
+    func test_switchingScreenWithoutRotationRestoresThatScreensMode() throws {
+        let states = try makeStates()
+        show(states, profile: "inner", width: 669, orientation: .vertical)
+        resize(states, to: CGSize(width: 500, height: 260), positionX: 50)
+        show(states, profile: "cover", width: 466, orientation: .vertical)
+        XCTAssertEqual(states.resizingState, .fullwidth)
+        XCTAssertEqual(states.interfaceSize.width, 466, accuracy: 0.001)
+        show(states, profile: "inner", width: 669, orientation: .vertical)
+        XCTAssertEqual(states.resizingState, .onehanded)
+        XCTAssertEqual(states.interfaceSize.width, 500, accuracy: 0.001)
+        XCTAssertEqual(states.interfaceSize.height, 260, accuracy: 0.001)
+    }
+
+    /// 同じ保存先を使う別のインスタンスが画面を切り替えても、値に付いた画面の識別子で入れ替えるので食い違わない
+    func test_profileIsStoredWithTheSettingItself() throws {
+        let a = try makeStates()
+        show(a, profile: "cover", width: 466, orientation: .vertical)
+        resize(a, to: CGSize(width: 380, height: 200), positionX: 43)
+        let b = try makeStates()
+        show(b, profile: "inner", width: 669, orientation: .vertical)
+        XCTAssertEqual(b.resizingState, .fullwidth)
+        let c = try makeStates()
+        show(c, profile: "cover", width: 466, orientation: .vertical)
+        XCTAssertEqual(c.resizingState, .onehanded)
+        XCTAssertEqual(c.interfaceSize.width, 380, accuracy: 0.001)
+    }
 }
