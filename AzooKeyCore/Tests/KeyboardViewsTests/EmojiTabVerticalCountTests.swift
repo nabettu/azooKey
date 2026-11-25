@@ -52,10 +52,12 @@ final class EmojiTabVerticalCountTests: XCTestCase {
             for orientation in [KeyboardOrientation.vertical, .horizontal] {
                 let base = emojiTabVerticalCount(isEmbedded: false, orientation: orientation, override: nil)
                 let rows = emojiTabVerticalCount(isEmbedded: false, orientation: orientation, override: nil, heightRatio: ratio)
-                guard rows > 2 else { continue }  // 下限の 2 行では大きくなりうる
+                // 下限の 2 行に止められたとき（行数 × 割合が 2 未満）だけは大きくなりうる
+                guard CGFloat(base) * ratio >= 2 else { continue }
                 XCTAssertLessThanOrEqual(ratio / CGFloat(rows), 1 / CGFloat(base) + 0.0001, "ratio=\(ratio) rows=\(rows)")
             }
         }
         XCTAssertEqual(emojiTabVerticalCount(isEmbedded: false, orientation: .vertical, override: nil, heightRatio: 0.66), 4)
+        XCTAssertEqual(emojiTabVerticalCount(isEmbedded: false, orientation: .horizontal, override: nil, heightRatio: 0.7), 3)
     }
 }
