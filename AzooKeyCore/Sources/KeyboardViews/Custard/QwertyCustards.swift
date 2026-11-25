@@ -37,7 +37,9 @@ public extension Custard {
 
     // MARK: - 英語専用モード（TypeAI。日本語タブを持たないので言語切替キーを出さない）
 
-    /// 英語専用モードの英字タブ。言語切替キー（Z の左）をシフトに、左下を数字タブにする（iOS 標準の英語キーボードと同じ並び）
+    /// 英語専用モードの英字タブ。言語切替キー（Z の左）をシフトに、左下を数字タブにする（iOS 標準の英語キーボードと同じ並び）。
+    /// 左下の右は地球儀・絵文字（`changeKeyboard`。フリック配列と同じ）。`qwertyDynamicChange` のままだと英字タブで
+    /// 「123」を出すので、左下と 123 が 2 つ並び、地球儀を自前で描く端末（実機の iPhone Duo など）で地球儀が消えていた
     static var qwertyEnglishOnlyLetters: Custard {
         var custard = qwertyEnglish(useShiftKey: true, useDeprecatedShiftKeyBehavior: false)
         custard.interface.keys[DefaultQwertyCustards.position(0, 2, width: 1.4)] = .system(.qwertyShift)
@@ -45,16 +47,18 @@ public extension Custard {
             label: .systemImage("textformat.123"),
             destination: .qwerty_numbers
         )
+        custard.interface.keys[DefaultQwertyCustards.position(1.4, 3, width: 1.4)] = .system(.changeKeyboard)
         return custard
     }
 
-    /// 英語専用モードの数字・記号タブ。左下の言語切替キーを英字タブに戻るキーにする
+    /// 英語専用モードの数字・記号タブ。左下の言語切替キーを英字タブに戻るキーにし、その右は英字タブと同じ地球儀・絵文字にする
     static func qwertyEnglishOnly(numbersOrSymbols custard: Custard) -> Custard {
         var custard = custard
         custard.interface.keys[DefaultQwertyCustards.position(0, 3, width: 1.4)] = DefaultQwertyCustards.tabKey(
             label: .text("ABC"),
             destination: .qwerty_english
         )
+        custard.interface.keys[DefaultQwertyCustards.position(1.4, 3, width: 1.4)] = .system(.changeKeyboard)
         return custard
     }
 }
