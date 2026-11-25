@@ -114,11 +114,15 @@ public struct KeyLabel<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
         textColor ?? theme.textColor.color
     }
 
-    init(_ type: KeyLabelType, width: CGFloat, textSize: Design.Fonts.LabelFontSizeStrategy = .large, textColor: Color? = nil) {
+    /// TypeAI: 地球儀と絵文字を半分ずつ並べたキーの列。絵文字の行き先をホストが決める（`Design.emojiKeyTab`）
+    private var emojiKeyGridX: CGFloat?
+
+    init(_ type: KeyLabelType, width: CGFloat, textSize: Design.Fonts.LabelFontSizeStrategy = .large, textColor: Color? = nil, emojiKeyGridX: CGFloat? = nil) {
         self.labelType = type
         self.width = width
         self.textColor = textColor
         self.textSize = textSize
+        self.emojiKeyGridX = emojiKeyGridX
     }
 
     private var keyViewFontSize: CGFloat {
@@ -222,7 +226,7 @@ public struct KeyLabel<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
                     .frame(width: halfWidth)
                 EmojiTabButtonView<Extension>(size: iconSize * scale) {
                     KeyboardFeedback<Extension>.tabOrOtherKey()
-                    self.action.registerAction(.moveTab(.system(.emoji_tab)), variableStates: self.variableStates)
+                    self.action.registerAction(.moveTab(Design.emojiKeyTabData(gridX: emojiKeyGridX)), variableStates: self.variableStates)
                 }
                 .environment(\.keyButtonPressChange) { [splitKeyPressChange] in splitKeyPressChange?(.trailing, $0) }
                 .frame(width: halfWidth)

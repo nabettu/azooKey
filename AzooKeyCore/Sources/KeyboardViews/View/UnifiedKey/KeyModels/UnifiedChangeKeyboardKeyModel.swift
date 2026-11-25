@@ -37,6 +37,9 @@ enum ChangeKeyboardKeyContent: Equatable {
 }
 
 struct UnifiedChangeKeyboardKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: UnifiedKeyModelProtocol {
+    /// TypeAI: このキーの格子の列。絵文字キーの行き先をホストが決める（`Design.emojiKeyTab`）
+    var gridX: CGFloat? = nil
+
     @MainActor private var _enablePasteButton: Bool {
         Extension.SettingProvider.enablePasteButton
     }
@@ -58,7 +61,7 @@ struct UnifiedChangeKeyboardKeyModel<Extension: ApplicationSpecificKeyboardViewE
             // 地球儀・絵文字はラベルの UIKit ボタンが自分でタッチを受ける
             return []
         case .emoji:
-            return [.moveTab(.system(.emoji_tab))]
+            return [.moveTab(Design.emojiKeyTabData(gridX: gridX))]
         case .cursorBar:
             return [.setCursorBar(.toggle)]
         }
@@ -77,7 +80,7 @@ struct UnifiedChangeKeyboardKeyModel<Extension: ApplicationSpecificKeyboardViewE
     }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states _: VariableStates, color _: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
-        KeyLabel(content.labelType, width: width)
+        KeyLabel(content.labelType, width: width, emojiKeyGridX: gridX)
     }
     func backgroundStyleWhenUnpressed<ThemeExtension>(states _: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         (theme.specialKeyFillColor.color, theme.specialKeyFillColor.blendMode)

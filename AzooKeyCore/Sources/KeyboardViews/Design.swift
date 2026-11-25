@@ -6,6 +6,7 @@
 //  Copyright © 2020 ensan. All rights reserved.
 //
 
+import CustardKit
 import Foundation
 import KeyboardThemes
 import SwiftUI
@@ -183,6 +184,18 @@ public enum Design {
     /// TypeAI: 全幅に戻すとき（タブ切替・回転）の中身の高さ。nil なら azooKey の値（保存値・幅由来）。
     /// ホストが高さを固定する画面（iPhone Duo）で、幅由来の高さを一瞬描いてから書き戻されるちらつきを防ぐ
     nonisolated(unsafe) public static var fixedFullWidthInterfaceHeight: CGFloat? = nil
+
+    /// TypeAI: 絵文字キー（`changeKeyboard` の絵文字）の行き先をホストが決める。引数はキーの格子の列（x）。
+    /// nil を返すか未設定なら絵文字タブ。両手フリックで、押した側の半分だけ絵文字の一覧にするのに使う
+    nonisolated(unsafe) public static var emojiKeyTab: (@MainActor (_ gridX: CGFloat) -> TabData?)? = nil
+
+    /// TypeAI: 絵文字キーを押したときに移るタブ（`emojiKeyTab`）。押した時点の状態で決める
+    @MainActor static func emojiKeyTabData(gridX: CGFloat?) -> TabData {
+        if let gridX, let tab = emojiKeyTab?(gridX) {
+            return tab
+        }
+        return .system(.emoji_tab)
+    }
 
     /// TypeAI: 絵文字タブの行数。nil なら azooKey の既定（縦 5 行・横 3 行）。
     /// iPhone Duo の内側は横向き扱いだが縦に十分な高さがあり、3 行では絵文字が大きすぎた

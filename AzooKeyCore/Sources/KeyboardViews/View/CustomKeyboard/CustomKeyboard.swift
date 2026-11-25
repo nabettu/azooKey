@@ -93,7 +93,7 @@ public extension CustardInterface {
                         QwertyNextCandidateKeyModel<Extension>()
                     }
                 case .changeKeyboard:
-                    UnifiedChangeKeyboardKeyModel<Extension>()
+                    UnifiedChangeKeyboardKeyModel<Extension>(gridX: pos.x)
                 case .qwertyLanguageSwitch:
                     QwertyLanguageSwitchKeyModel<Extension>(
                         languages: (.ja_JP, .en_US)
