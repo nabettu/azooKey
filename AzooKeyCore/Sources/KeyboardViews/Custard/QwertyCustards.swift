@@ -39,26 +39,27 @@ public extension Custard {
 
     /// 英語専用モードの英字タブ。言語切替キー（Z の左）をシフトに、左下を数字タブにする（iOS 標準の英語キーボードと同じ並び）。
     /// 左下の右は地球儀・絵文字（`changeKeyboard`。フリック配列と同じ）。`qwertyDynamicChange` のままだと英字タブで
-    /// 「123」を出すので、左下と 123 が 2 つ並び、地球儀を自前で描く端末（実機の iPhone Duo など）で地球儀が消えていた
-    static var qwertyEnglishOnlyLetters: Custard {
+    /// 「123」を出すので、左下と 123 が 2 つ並び、地球儀を自前で描く端末（実機の iPhone Duo など）で地球儀が消えていた。
+    /// - Parameter splitsChangeKey: 地球儀と絵文字を半分ずつ並べるか（`ChangeKeyboardKeyContent.splitsBackgroundInHalves`）
+    static func qwertyEnglishOnlyLetters(splitsChangeKey: Bool) -> Custard {
         var custard = qwertyEnglish(useShiftKey: true, useDeprecatedShiftKeyBehavior: false)
         custard.interface.keys[DefaultQwertyCustards.position(0, 2, width: 1.4)] = .system(.qwertyShift)
         custard.interface.keys[DefaultQwertyCustards.position(0, 3, width: 1.4)] = DefaultQwertyCustards.tabKey(
             label: .systemImage("textformat.123"),
             destination: .qwerty_numbers
         )
-        custard.interface.keys[DefaultQwertyCustards.position(1.4, 3, width: 1.4)] = .system(.changeKeyboard)
+        DefaultQwertyCustards.placeEnglishOnlyChangeKey(in: &custard, splits: splitsChangeKey)
         return custard
     }
 
     /// 英語専用モードの数字・記号タブ。左下の言語切替キーを英字タブに戻るキーにし、その右は英字タブと同じ地球儀・絵文字にする
-    static func qwertyEnglishOnly(numbersOrSymbols custard: Custard) -> Custard {
+    static func qwertyEnglishOnly(numbersOrSymbols custard: Custard, splitsChangeKey: Bool) -> Custard {
         var custard = custard
         custard.interface.keys[DefaultQwertyCustards.position(0, 3, width: 1.4)] = DefaultQwertyCustards.tabKey(
             label: .text("ABC"),
             destination: .qwerty_english
         )
-        custard.interface.keys[DefaultQwertyCustards.position(1.4, 3, width: 1.4)] = .system(.changeKeyboard)
+        DefaultQwertyCustards.placeEnglishOnlyChangeKey(in: &custard, splits: splitsChangeKey)
         return custard
     }
 }
@@ -406,6 +407,17 @@ private enum DefaultQwertyCustards {
                 shows_tap_bubble: !variations.isEmpty
             )
         )
+    }
+
+    /// 英語専用の下段の 2 つ目（地球儀・絵文字）を置く。半分ずつ並べるときは 1.4 列を割ると 1 つが小さすぎるので
+    /// （2026-11-25 ユーザー指摘）、スペースを 1 列縮めて 2.4 列にし、半分ずつがほぼ文字キー 1 つ分になるようにする
+    static func placeEnglishOnlyChangeKey(in custard: inout Custard, splits: Bool) {
+        custard.interface.keys[position(1.4, 3, width: 1.4)] = nil
+        custard.interface.keys[position(2.8, 3, width: 4.4)] = nil
+        // 位置は辞書のキーなので、足し引きで出さずに値を書く（7.2 - 1.4 - 2.4 は 3.4000000000000004 になる）
+        let (changeWidth, spaceX, spaceWidth) = splits ? (2.4, 3.8, 3.4) : (1.4, 2.8, 4.4)
+        custard.interface.keys[position(1.4, 3, width: changeWidth)] = .system(.changeKeyboard)
+        custard.interface.keys[position(spaceX, 3, width: spaceWidth)] = .system(.qwertySpace)
     }
 
     static func tabKey(

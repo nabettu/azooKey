@@ -216,9 +216,17 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
         Extension.SettingProvider.englishKeyboardLayout == .qwerty && Extension.SettingProvider.japaneseKeyboardLayout == .flick
     }
 
-    private var standardEnglishQwertyCustard: Custard {
+    /// 英語専用の下段で地球儀と絵文字を半分ずつ並べるか（並べるならキーを広げる）
+    @MainActor private var splitsEnglishOnlyChangeKey: Bool {
+        ChangeKeyboardKeyContent.resolve(
+            needsInputModeSwitchKey: SemiStaticStates.shared.needsInputModeSwitchKey,
+            useEmojiKeyInsteadOfCursorBar: Extension.SettingProvider.useEmojiKeyInsteadOfCursorBar
+        ).splitsBackgroundInHalves
+    }
+
+    @MainActor private var standardEnglishQwertyCustard: Custard {
         if isEnglishOnlyMode {
-            return .qwertyEnglishOnlyLetters
+            return .qwertyEnglishOnlyLetters(splitsChangeKey: splitsEnglishOnlyChangeKey)
         }
         return switch Extension.SettingProvider.qwertyShiftBehaviorPreference {
         case .left:
@@ -259,11 +267,11 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
                 customKeys: Extension.SettingProvider.numberTabCustomKeysSetting
             )
             CustomKeyboardView<Extension>(
-                custard: isEnglishOnlyMode ? .qwertyEnglishOnly(numbersOrSymbols: numbers) : numbers
+                custard: isEnglishOnlyMode ? .qwertyEnglishOnly(numbersOrSymbols: numbers, splitsChangeKey: splitsEnglishOnlyChangeKey) : numbers
             )
         case .qwerty_symbols:
             CustomKeyboardView<Extension>(
-                custard: isEnglishOnlyMode ? .qwertyEnglishOnly(numbersOrSymbols: .qwertySymbols) : .qwertySymbols
+                custard: isEnglishOnlyMode ? .qwertyEnglishOnly(numbersOrSymbols: .qwertySymbols, splitsChangeKey: splitsEnglishOnlyChangeKey) : .qwertySymbols
             )
         case let .custard(custard):
             CustomKeyboardView<Extension>(custard: custard)
