@@ -187,7 +187,8 @@ public enum Design {
 
     /// TypeAI: 絵文字キー（`changeKeyboard` の絵文字）の行き先をホストが決める。引数はキーの格子の列（x）。
     /// nil を返すか未設定なら絵文字タブ。両手フリックで、押した側の半分だけ絵文字の一覧にするのに使う
-    nonisolated(unsafe) public static var emojiKeyTab: (@MainActor (_ gridX: CGFloat) -> TabData?)? = nil
+    /// 読み書きともメインスレッドに限る（キーを押したときに読むので、登録・解除と競合させない。ai-review の指摘）
+    @MainActor public static var emojiKeyTab: (@MainActor (_ gridX: CGFloat) -> TabData?)? = nil
 
     /// TypeAI: 絵文字キーを押したときに移るタブ（`emojiKeyTab`）。押した時点の状態で決める
     @MainActor static func emojiKeyTabData(gridX: CGFloat?) -> TabData {
