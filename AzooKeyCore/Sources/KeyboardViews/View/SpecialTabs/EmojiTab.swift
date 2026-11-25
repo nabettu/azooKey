@@ -574,7 +574,7 @@ private extension EmojiTabExpandModePreference.Level {
 /// ホストが行数を決めていれば（`Design.emojiTabVerticalCount`）それに従う
 /// TypeAI: サイズ調整で高さを縮めたときは、縮めた割合（`heightRatio`。1 = 100%）で行数を減らす。
 /// 行数をそのままにすると絵文字が縮めたぶん小さくなる（2026-11-25 ユーザー指示「縮めたときは行数を少なく」）。
-/// 2 行より少なくはしない・100% より高くしても行は増やさない
+/// 2 行より少なくはしない（ホストが 1 行を指定したときは 1 行のまま）・100% より高くしても行は増やさない
 func emojiTabVerticalCount(isEmbedded: Bool, orientation: KeyboardOrientation, override: Int?, heightRatio: CGFloat = 1) -> Int {
     let base: Int
     if isEmbedded {

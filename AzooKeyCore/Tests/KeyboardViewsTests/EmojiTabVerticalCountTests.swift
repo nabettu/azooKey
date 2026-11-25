@@ -36,6 +36,8 @@ final class EmojiTabVerticalCountTests: XCTestCase {
         XCTAssertEqual(emojiTabVerticalCount(isEmbedded: false, orientation: .horizontal, override: nil, heightRatio: 0.3), 2)
         XCTAssertEqual(emojiTabVerticalCount(isEmbedded: false, orientation: .vertical, override: nil, heightRatio: 0.1), 2)
         XCTAssertEqual(emojiTabVerticalCount(isEmbedded: false, orientation: .vertical, override: nil, heightRatio: 1.4), 5)
+        // ホストが 1 行を指定したら、縮めても 1 行のまま（2 行に増やさない）
+        XCTAssertEqual(emojiTabVerticalCount(isEmbedded: false, orientation: .horizontal, override: 1, heightRatio: 0.5), 1)
     }
 
     func test_heightRatioOfShrunkInterface() {
