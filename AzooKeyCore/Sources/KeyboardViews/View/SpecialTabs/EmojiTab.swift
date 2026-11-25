@@ -572,7 +572,7 @@ private extension EmojiTabExpandModePreference.Level {
 /// 埋め込みは縦長の枠なので、Duo の内側（横向き扱い）でも iPhone の縦向きと同じ 5 行にする
 /// （2026-11-21 ユーザー指摘「Duo じゃない端末だと小さくして 5 行」）。
 /// ホストが行数を決めていれば（`Design.emojiTabVerticalCount`）それに従う
-/// TypeAI: サイズ調整で高さを縮めたときは、縮めた割合（`heightRatio`。1 = 100%）で行数を減らす（切り上げ。絵文字は 100% より大きくしない）。
+/// TypeAI: サイズ調整で高さを縮めたときは、縮めた割合（`heightRatio`。1 = 100%）で行数を減らす（行数 × √割合 の切り上げ。絵文字は 100% より大きくしない）。
 /// 行数をそのままにすると絵文字が縮めたぶん小さくなる（2026-11-25 ユーザー指示「縮めたときは行数を少なく」）。
 /// 2 行より少なくはしない（ホストが 1 行を指定したときは 1 行のまま）・100% より高くしても行は増やさない
 func emojiTabVerticalCount(isEmbedded: Bool, orientation: KeyboardOrientation, override: Int?, heightRatio: CGFloat = 1) -> Int {
@@ -588,9 +588,10 @@ func emojiTabVerticalCount(isEmbedded: Bool, orientation: KeyboardOrientation, o
         }
     }
     let ratio = min(max(heightRatio, 0), 1)
-    // 切り上げる: 1 行の高さを 100% のときより大きくしない（四捨五入だと 66% で 3 行になり絵文字が 1.1 倍になった）。
-    // 浮動小数の誤差で 3.0000001 が 4 にならないよう、わずかに引いてから切り上げる
-    let scaled = Int((CGFloat(base) * ratio - 0.0001).rounded(.up))
+    // 行数 × √(割合) を切り上げる。絵文字の大きさ（100% との比）は割合と √(割合) のあいだになる:
+    // キーと同じだけ小さくすると窮屈・行数 × 割合だと絵文字がほとんど小さくならず大きく見えた（2026-11-25 ユーザー指摘。中間案）。
+    // 切り上げなので 100% より大きくはならない。浮動小数の誤差で 4.0000001 が 5 にならないよう、わずかに引いてから切り上げる
+    let scaled = Int((CGFloat(base) * ratio.squareRoot() - 0.0001).rounded(.up))
     return min(base, max(2, scaled))
 }
 
