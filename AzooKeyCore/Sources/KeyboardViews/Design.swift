@@ -190,6 +190,10 @@ public enum Design {
     /// 読み書きともメインスレッドに限る（キーを押したときに読むので、登録・解除と競合させない。ai-review の指摘）
     @MainActor public static var emojiKeyTab: (@MainActor (_ gridX: CGFloat) -> TabData?)? = nil
 
+    /// TypeAI: 埋め込みの絵文字の一覧（`EmojiTab(embeddedSize:)`）に出す「戻る」キーの行き先。nil なら出さない。
+    /// 両手フリックで押した側だけ絵文字にしているときに、両手へ戻すのに使う（反対側の絵文字キーだけでは見つけにくい）
+    @MainActor public static var embeddedEmojiBackTab: (@MainActor () -> TabData?)? = nil
+
     /// TypeAI: 絵文字キーを押したときに移るタブ（`emojiKeyTab`）。押した時点の状態で決める
     @MainActor static func emojiKeyTabData(gridX: CGFloat?) -> TabData {
         if let gridX, let tab = emojiKeyTab?(gridX) {

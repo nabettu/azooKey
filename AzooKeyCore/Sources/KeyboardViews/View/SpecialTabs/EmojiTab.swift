@@ -6,6 +6,7 @@
 //  Copyright © 2023 ensan. All rights reserved.
 //
 
+import CustardKit
 import KeyboardThemes
 import SwiftUI
 import SwiftUtils
@@ -349,6 +350,11 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
         SimpleKeyView(model: SimpleKeyModel<Extension>(keyLabelType: .text("戻る"), unpressedKeyColorType: .special, pressActions: [.moveTab(.system(.last_tab))], longPressActions: .none), width: functionKeyWidth * 2, height: footerHeight)
     }
 
+    /// TypeAI: 埋め込みの一覧で、ホストが戻り先を決めたときだけ出す「戻る」キー（`Design.embeddedEmojiBackTab`）
+    private func embeddedBackKey(_ tab: TabData) -> SimpleKeyView<Extension> {
+        SimpleKeyView(model: SimpleKeyModel<Extension>(keyLabelType: .image("arrow.uturn.backward"), unpressedKeyColorType: .special, pressActions: [.moveTab(tab)], longPressActions: .none), width: functionKeyWidth, height: footerHeight)
+    }
+
     @State private var scrollProxy: ScrollViewProxy?
 
     private func genreButton(_ genre: Genre) -> some View {
@@ -392,6 +398,8 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
             HStack(spacing: 0) {
                 if embeddedSize == nil {
                     backTabKey()
+                } else if let backTab = Design.embeddedEmojiBackTab?() {
+                    embeddedBackKey(backTab)
                 }
                 ForEach(allGenre, id: \.self) { genre in
                     if !self.emojis[genre, default: []].isEmpty {
