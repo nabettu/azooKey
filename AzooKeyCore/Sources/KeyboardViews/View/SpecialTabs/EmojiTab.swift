@@ -215,7 +215,8 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
         self.embeddedSize = nil
     }
 
-    /// TypeAI: フリック配列の横に埋め込む。「戻る」キーは出さない（タブを移っていないので戻り先が無い）
+    /// TypeAI: フリック配列の横に埋め込む。「戻る」キーは、ホストが戻り先を返したときだけ出す（`Design.embeddedEmojiBackTab`。
+    /// 普段はタブを移っていないので戻り先が無い。両手フリックで押した側だけ絵文字にしたときは両手へ戻す）
     init(embeddedSize: CGSize) {
         self.embeddedSize = embeddedSize
     }
