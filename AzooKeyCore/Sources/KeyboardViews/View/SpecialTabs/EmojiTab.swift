@@ -155,6 +155,16 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
     /// TypeAI: フリック配列の横に埋め込むときの大きさ（`Design.embeddedEmojiPanels`）。nil なら絵文字タブとして全体に出す
     private let embeddedSize: CGSize?
 
+    /// TypeAI: 中身の高さが `interfaceHeight` のときのキーの部分の高さ
+    private static func keysHeight(interfaceHeight: CGFloat, states: VariableStates) -> CGFloat {
+        TabDependentDesign(
+            width: 1,
+            height: 1,
+            interfaceSize: CGSize(width: states.interfaceSize.width, height: interfaceHeight),
+            layoutContext: states.layoutContext
+        ).keysHeight
+    }
+
     /// 参考用
     private var keysHeight: CGFloat {
         if let embeddedSize { return embeddedSize.height }
@@ -180,9 +190,14 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
             isEmbedded: embeddedSize != nil,
             orientation: variableStates.keyboardOrientation,
             override: Design.emojiTabVerticalCount,
+            // 候補バーの分を除いた「キーの部分」の高さで比べる。中身全体の高さで比べると、
+            // 実際の絵文字の大きさとずれる（250→200pt で 80% と見て、実際は 76%。ai-review の指摘）
             heightRatio: emojiTabHeightRatio(
-                interfaceHeight: variableStates.interfaceSize.height,
-                fullHeight: OneHandedResizeFrame.fullHeight(context: variableStates.layoutContext)
+                interfaceHeight: Self.keysHeight(interfaceHeight: variableStates.interfaceSize.height, states: variableStates),
+                fullHeight: Self.keysHeight(
+                    interfaceHeight: OneHandedResizeFrame.fullHeight(context: variableStates.layoutContext),
+                    states: variableStates
+                )
             )
         )
     }
