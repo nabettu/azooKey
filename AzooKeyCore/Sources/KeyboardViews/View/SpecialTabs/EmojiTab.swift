@@ -179,7 +179,11 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
         emojiTabVerticalCount(
             isEmbedded: embeddedSize != nil,
             orientation: variableStates.keyboardOrientation,
-            override: Design.emojiTabVerticalCount
+            override: Design.emojiTabVerticalCount,
+            heightRatio: emojiTabHeightRatio(
+                interfaceHeight: variableStates.interfaceSize.height,
+                fullHeight: OneHandedResizeFrame.fullHeight(context: variableStates.layoutContext)
+            )
         )
     }
 
@@ -568,11 +572,28 @@ private extension EmojiTabExpandModePreference.Level {
 /// 埋め込みは縦長の枠なので、Duo の内側（横向き扱い）でも iPhone の縦向きと同じ 5 行にする
 /// （2026-11-21 ユーザー指摘「Duo じゃない端末だと小さくして 5 行」）。
 /// ホストが行数を決めていれば（`Design.emojiTabVerticalCount`）それに従う
-func emojiTabVerticalCount(isEmbedded: Bool, orientation: KeyboardOrientation, override: Int?) -> Int {
-    if isEmbedded { return 5 }
-    if let override, override > 0 { return override }
-    switch orientation {
-    case .vertical: return 5
-    case .horizontal: return 3
+/// TypeAI: サイズ調整で高さを縮めたときは、縮めた割合（`heightRatio`。1 = 100%）で行数を減らす。
+/// 行数をそのままにすると絵文字が縮めたぶん小さくなる（2026-11-25 ユーザー指示「縮めたときは行数を少なく」）。
+/// 2 行より少なくはしない・100% より高くしても行は増やさない
+func emojiTabVerticalCount(isEmbedded: Bool, orientation: KeyboardOrientation, override: Int?, heightRatio: CGFloat = 1) -> Int {
+    let base: Int
+    if isEmbedded {
+        base = 5
+    } else if let override, override > 0 {
+        base = override
+    } else {
+        switch orientation {
+        case .vertical: base = 5
+        case .horizontal: base = 3
+        }
     }
+    let ratio = min(max(heightRatio, 0), 1)
+    let scaled = Int((CGFloat(base) * ratio).rounded())
+    return min(base, max(2, scaled))
+}
+
+/// TypeAI: 絵文字タブの行数を決める高さの割合。いまの中身の高さ ÷ 100% の高さ（1 を超えない）
+func emojiTabHeightRatio(interfaceHeight: CGFloat, fullHeight: CGFloat) -> CGFloat {
+    guard fullHeight > 0 else { return 1 }
+    return min(interfaceHeight / fullHeight, 1)
 }
